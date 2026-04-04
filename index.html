@@ -1214,6 +1214,8 @@ let activeTab = 'ov';
 let filterMode = 'all';
 let editingMeetId   = null;
 let editingPermitKey = null;
+let editingBuyCaseId = null;  // 編集中のBUY案件ID（nullなら新規）
+let editingBrkCaseId = null;  // 編集中のBRK案件ID（nullなら新規）
 let pendingFiles = [], pendingIdx = 0, pendingData = null;
 
 function getCases() { return mode==='buy' ? buyCases : brkCases; }
@@ -2082,6 +2084,7 @@ const BUY_FIELDS=['name','addr','source','zone','owner','seller','seller_tel','a
 const BUY_DATE_FIELDS=['infodate','contract_date','settlement_date'];
 
 function openBuyModal(c) {
+  editingBuyCaseId = c ? c.id : null;
   const isEdit=!!c;
   document.getElementById('buyModalTitle').textContent=isEdit?'案件情報を編集':'新規案件登録（分譲地買取）';
   document.getElementById('buySaveBtn').textContent=isEdit?'保存':'登録する';
@@ -2104,8 +2107,8 @@ function openBuyModal(c) {
 function saveBuyCase() {
   const name=document.getElementById('by_name').value.trim();
   if(!name){alert('案件名を入力してください');return;}
-  const c=getCur();
-  const isEdit=c&&mode==='buy';
+  const isEdit=!!editingBuyCaseId;
+  const c=isEdit?buyCases.find(x=>x.id===editingBuyCaseId):null;
   const data={name,status:document.getElementById('by_status').value};
   BUY_FIELDS.filter(f=>f!=='name').forEach(f=>{const el=document.getElementById('by_'+f);if(el)data[f]=el.value.trim();});
   BUY_DATE_FIELDS.forEach(f=>{const el=document.getElementById('by_'+f);if(el)data[f]=el.value;});
@@ -2124,6 +2127,7 @@ const BRK_FIELDS=['name','addr','owner','ask_price','appraisal','sale_price','de
 const BRK_DATE_FIELDS=['med_start','med_end','contract_date','settlement_date'];
 
 function openBrkModal(c) {
+  editingBrkCaseId = c ? c.id : null;
   const isEdit=!!c;
   document.getElementById('brkModalTitle').textContent=isEdit?'案件情報を編集':'新規案件登録（売買仲介）';
   document.getElementById('brkSaveBtn').textContent=isEdit?'保存':'登録する';
@@ -2149,8 +2153,8 @@ function openBrkModal(c) {
 function saveBrkCase() {
   const name=document.getElementById('bk_name').value.trim();
   if(!name){alert('案件名を入力してください');return;}
-  const c=getCur();
-  const isEdit=c&&mode==='brk';
+  const isEdit=!!editingBrkCaseId;
+  const c=isEdit?brkCases.find(x=>x.id===editingBrkCaseId):null;
   const data={name,prop_type:document.getElementById('bk_prop_type').value,status:document.getElementById('bk_status').value,mediation:document.getElementById('bk_mediation').value};
   BRK_FIELDS.filter(f=>f!=='name').forEach(f=>{const el=document.getElementById('bk_'+f);if(el)data[f]=el.value.trim();});
   BRK_DATE_FIELDS.forEach(f=>{const el=document.getElementById('bk_'+f);if(el)data[f]=el.value;});
