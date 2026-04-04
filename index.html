@@ -606,7 +606,10 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
     </div>
   </div>
   <div class="f3">
-    <div class="frow"><label class="flabel">築年月</label><input class="fi" id="bk_bld_built" placeholder="例: 2003年3月"></div>
+    <div class="frow"><label class="flabel">築年月</label>
+      <input class="fi" id="bk_bld_built" placeholder="例: 2003年3月" oninput="updateBldAgeDisp('bk_bld_built','bk_bld_age_disp')">
+      <span style="font-size:11px;color:var(--text3);margin-top:3px;display:block">＝ <span id="bk_bld_age_disp" style="font-weight:600;color:var(--text2)">—</span></span>
+    </div>
     <div class="frow"><label class="flabel">間取り</label><input class="fi" id="bk_bld_layout" placeholder="例: 4LDK"></div>
     <div class="frow"><label class="flabel">持分（建物）</label><input class="fi" id="bk_bld_share" placeholder="例: 全部"></div>
   </div>
@@ -910,7 +913,10 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
     </div>
   </div>
   <div class="f2">
-    <div class="frow"><label class="flabel">築年月</label><input class="fi" id="dt_bld_built" placeholder="例: 2003年3月"></div>
+    <div class="frow"><label class="flabel">築年月</label>
+      <input class="fi" id="dt_bld_built" placeholder="例: 2003年3月" oninput="updateBldAgeDisp('dt_bld_built','dt_bld_age_disp')">
+      <span style="font-size:11px;color:var(--text3);margin-top:3px;display:block">＝ <span id="dt_bld_age_disp" style="font-weight:600;color:var(--text2)">—</span></span>
+    </div>
     <div class="frow"><label class="flabel">間取り</label><input class="fi" id="dt_bld_layout" placeholder="例: 4LDK"></div>
   </div>
   <div style="background:var(--surface2);border-radius:var(--rs);padding:12px 14px;margin-bottom:13px">
@@ -1590,7 +1596,7 @@ function renderBrkMain(c) {
           <div class="pt-row"><span class="pt-l">主体構造</span><span class="pt-v">${c.bld_struct_main||c.bld_structure||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">屋根材</span><span class="pt-v">${c.bld_roof||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">階数</span><span class="pt-v">${c.bld_floors||'—'}</span></div>
-          <div class="pt-row"><span class="pt-l">築年月</span><span class="pt-v">${c.bld_built||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">築年月</span><span class="pt-v">${c.bld_built||'—'}${c.bld_built?` <span style="color:var(--text3);font-size:12px">（${calcBuildAge(c.bld_built)||''}）</span>`:''}</span></div>
           <div class="pt-row"><span class="pt-l">間取り</span><span class="pt-v">${c.bld_layout||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">床面積（1階）</span><span class="pt-v">${c.bld_area_1f?c.bld_area_1f+'㎡':'—'}</span></div>
           <div class="pt-row"><span class="pt-l">床面積（2階）</span><span class="pt-v">${c.bld_area_2f?c.bld_area_2f+'㎡':'—'}</span></div>
@@ -2137,6 +2143,7 @@ function openBrkModal(c) {
     ['bld_struct_main','bld_roof','bld_floors'].forEach(f=>comboSet('bk_'+f,'bk_'+f+'_custom',isEdit?(c[f]||''):''));
     ['inf_water','inf_sewer','inf_gas','inf_elec'].forEach(f=>comboSet('bk_'+f,'bk_'+f+'_custom',isEdit?(c[f]||''):''));
     renderRestrictRows('bk', isEdit?(c.restricts||[c.land_restrict||'']):['']);
+    updateBldAgeDisp('bk_bld_built','bk_bld_age_disp');
   },50);
 }
 function saveBrkCase() {

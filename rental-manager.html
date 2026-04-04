@@ -256,7 +256,10 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
         <option>店舗・事務所</option><option>倉庫・工場</option><option>その他</option>
       </select></div>
     <div class="frow"><label class="flabel">総戸数</label><input class="fi" id="bld_total_rooms" type="number" placeholder="例: 8"></div>
-    <div class="frow"><label class="flabel">築年月</label><input class="fi" id="bld_built" placeholder="例: 2005年3月"></div>
+    <div class="frow"><label class="flabel">築年月</label>
+      <input class="fi" id="bld_built" placeholder="例: 2005年3月" oninput="updateBldAge()">
+      <span style="font-size:11px;color:var(--text3);margin-top:3px;display:block">＝ <span id="bld_age_disp" style="font-weight:600;color:var(--text2)">—</span></span>
+    </div>
   </div>
   <div class="f3">
     <div class="frow"><label class="flabel">構造</label>
@@ -560,7 +563,8 @@ function renderSidebar() {
       <div class="pi-sub">
         <span class="sdot" style="background:${dotColor}"></span>
         <span>${sub}</span>
-        ${p.addr?`<span>・</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px">${p.addr}</span>`:''}
+        ${p.addr?`<span>・</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">${p.addr}</span>`:''}
+        ${(isMgmt&&p.built)?`<span>・</span><span>${calcBuildAge(p.built)||''}</span>`:''}
       </div>
     </div>`;
   }).join('');
@@ -607,7 +611,7 @@ function renderMgmtMain(c) {
         <div class="det-meta">
           <span class="badge" style="background:var(--green-l);color:var(--green-d)">${c.type||'建物'}</span>
           ${c.addr?`<span style="font-size:12px;color:var(--text3)">📍 ${c.addr}</span>`:''}
-          ${c.built?`<span style="font-size:12px;color:var(--text3)">築: ${c.built}</span>`:''}
+          ${c.built?`<span style="font-size:12px;color:var(--text3)">築: ${c.built}（${calcBuildAge(c.built)||''}）</span>`:''}
         </div>
       </div>
       <button class="btn btn-sm" onclick="openEditBld()">編集</button>
@@ -656,7 +660,7 @@ function renderMgmtMain(c) {
         <div class="pt">
           <div class="pt-row"><span class="pt-l">建物種別</span><span class="pt-v">${c.type||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">所在地</span><span class="pt-v">${c.addr||'—'}</span></div>
-          <div class="pt-row"><span class="pt-l">築年月</span><span class="pt-v">${c.built||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">築年月</span><span class="pt-v">${c.built||'—'}${c.built?` <span style="color:var(--text3);font-size:12px">（${calcBuildAge(c.built)||''}）</span>`:''}</span></div>
           <div class="pt-row"><span class="pt-l">構造</span><span class="pt-v">${c.structure||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">階数</span><span class="pt-v">${c.floors||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">総戸数</span><span class="pt-v">${c.total_rooms||'—'}</span></div>
@@ -802,6 +806,7 @@ function openEditBld() {
   document.getElementById('bld_total_rooms').value = c.total_rooms||'';
   document.getElementById('bld_type').value      = c.type||'マンション';
   document.getElementById('bld_structure').value = c.structure||'';
+  setTimeout(updateBldAge, 50);
   document.getElementById('bldModal').style.display='flex';
 }
 function saveBld() {
@@ -956,6 +961,51 @@ function closeModal(id) { document.getElementById(id).style.display='none'; }
 document.addEventListener('keydown', e=>{
   if(e.key==='Escape') ['bldModal','roomModal','brkModal','logModal','gdSettingsModal'].forEach(closeModal);
 });
+
+
+// ── 築年数計算 ──
+function updateBldAge() {
+  const val = document.getElementById("bld_built")?.value||"";
+  const el = document.getElementById("bld_age_disp");
+  if (el) el.textContent = calcBuildAge(val)||"—";
+}
+
+function calcBuildAge(builtStr) {
+  if (!builtStr) return null;
+  // 対応フォーマット: 2005年3月 / 2005年 / 2005/03 / 2005-03 / H17.3 / 平成17年3月
+  let year = null, month = 1;
+
+  // 西暦パターン
+  let m = builtStr.match(/(\d{4})[年\/\-](\d{1,2})/);
+  if (m) { year=parseInt(m[1]); month=parseInt(m[2]); }
+  else {
+    m = builtStr.match(/(\d{4})年/);
+    if (m) year=parseInt(m[1]);
+  }
+  // 和暦パターン（昭和・平成・令和）
+  if (!year) {
+    const wareki = {昭和:1925,昭:1925,S:1925,平成:1988,平:1988,H:1988,令和:2018,令:2018,R:2018};
+    for (const [k,base] of Object.entries(wareki)) {
+      const re = new RegExp(k+'(\\d{1,2})');
+      const wm = builtStr.match(re);
+      if (wm) { year=base+parseInt(wm[1]); break; }
+    }
+    const wm2 = builtStr.match(/[年\/\-](\d{1,2})/);
+    if (wm2) month=parseInt(wm2[1]);
+  }
+  if (!year) return null;
+
+  const now = new Date();
+  const built = new Date(year, month-1, 1);
+  const diffMs = now - built;
+  const diffYears = diffMs / (1000*60*60*24*365.25);
+  if (diffYears < 0) return null;
+  const y = Math.floor(diffYears);
+  const mo = Math.floor((diffYears - y) * 12);
+  if (y === 0) return `築${mo}ヶ月`;
+  if (mo === 0) return `築${y}年`;
+  return `築${y}年${mo}ヶ月`;
+}
 
 // ============================================================
 // EXPORT / IMPORT
