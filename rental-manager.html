@@ -319,6 +319,15 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
   </div>
   <div class="f2">
     <div class="frow"><label class="flabel">敷金預かり額（円）</label><input class="fi" id="rm_deposit_amt" placeholder="例: 130,000"></div>
+    <div class="mdiv"></div><div class="msub">▍ 貸主情報</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">貸主氏名・法人名</label><input class="fi" id="rm_landlord_name" placeholder="例: 田中 一郎 / 株式会社○○"></div>
+    <div class="frow"><label class="flabel">連絡先</label><input class="fi" id="rm_landlord_tel" placeholder="例: 090-XXXX-XXXX"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">貸主住所</label><input class="fi" id="rm_landlord_addr" placeholder="例: 静岡県裾野市…"></div>
+    <div class="frow"><label class="flabel">口座情報</label><input class="fi" id="rm_landlord_bank" placeholder="例: ○○銀行 普通 1234567"></div>
+  </div>
     <div class="mdiv"></div><div class="msub">▍ 保証情報</div>
   <div class="f2">
     <div class="frow"><label class="flabel">保証会社</label>
@@ -854,7 +863,7 @@ function saveBrk() {
 // ============================================================
 // ROOM MODAL
 // ============================================================
-const RM_FIELDS = ['num','layout','area','rent','mgmt','parking','deposit','key_money','tenant','tenant_tel','deposit_amt','guarantor','memo','floor','repair_note','cosigner','guarantor_type','cosigner_type'];
+const RM_FIELDS = ['num','layout','area','rent','mgmt','parking','deposit','key_money','tenant','tenant_tel','deposit_amt','guarantor','memo','floor','repair_note','cosigner','guarantor_type','cosigner_type','landlord_name','landlord_tel','landlord_addr','landlord_bank'];
 const RM_DATES  = ['start','end','renew','move_out','move_in','repair_date'];
 
 function openAddRoom() {
@@ -867,6 +876,7 @@ function openAddRoom() {
   document.getElementById('rm_status').value='空室';
   document.getElementById('rm_guarantor_type').value='';
   document.getElementById('rm_cosigner_type').value='';
+  ['rm_landlord_name','rm_landlord_tel','rm_landlord_addr','rm_landlord_bank'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('roomModal').style.display='flex';
 }
 function openEditRoom(rid) {
@@ -881,6 +891,7 @@ function openEditRoom(rid) {
   document.getElementById('rm_status').value=r.status||'空室';
   document.getElementById('rm_guarantor_type').value=r.guarantor_type||'';
   document.getElementById('rm_cosigner_type').value=r.cosigner_type||'';
+  ['landlord_name','landlord_tel','landlord_addr','landlord_bank'].forEach(f=>{const el=document.getElementById('rm_'+f);if(el)el.value=r[f]||'';});
   document.getElementById('roomModal').style.display='flex';
 }
 function saveRoom() {
