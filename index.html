@@ -281,6 +281,19 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 .gdrive-btn.gd-load:hover{background:var(--teal-l);}
 .gdrive-btn:disabled{opacity:.4;cursor:not-allowed;}
 .gdrive-status{font-size:10px;color:var(--text3);text-align:center;padding:2px 14px 4px;background:var(--surface);}
+
+/* PASSWORD SCREEN */
+.pw-screen{position:fixed;inset:0;background:#1a1a1a;display:flex;align-items:center;justify-content:center;z-index:9999;}
+.pw-box{background:#fff;border-radius:12px;padding:40px 36px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center;}
+.pw-logo{font-size:32px;margin-bottom:8px;}
+.pw-title{font-size:18px;font-weight:800;color:#1a1a1a;margin-bottom:4px;}
+.pw-sub{font-size:12px;color:#888;margin-bottom:24px;}
+.pw-input{width:100%;padding:12px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px;font-family:inherit;outline:none;box-sizing:border-box;transition:border .15s;text-align:center;letter-spacing:2px;}
+.pw-input:focus{border-color:#2d7d46;}
+.pw-btn{width:100%;padding:12px;background:#2d7d46;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:12px;transition:background .15s;}
+.pw-btn:hover{background:#236038;}
+.pw-error{color:#e53935;font-size:13px;margin-top:10px;display:none;}
+.pw-hint{font-size:11px;color:#aaa;margin-top:16px;}
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
 </style>
@@ -288,7 +301,21 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 <script src="https://apis.google.com/js/api.js" async defer></script>
 </head>
 <body>
-<div class="app">
+
+<div class="pw-screen" id="pwScreen">
+  <div class="pw-box">
+    <div class="pw-logo">🏗</div>
+    <div class="pw-title">不動産案件管理</div>
+    <div class="pw-sub">第一開発株式会社</div>
+    <input class="pw-input" type="password" id="pwInput" placeholder="パスワードを入力"
+      onkeydown="if(event.key==='Enter')checkPassword()">
+    <button class="pw-btn" onclick="checkPassword()">ログイン</button>
+    <div class="pw-error" id="pwError">パスワードが違います</div>
+    <div class="pw-hint">※ パスワードを忘れた場合は管理者にお問い合わせください</div>
+  </div>
+</div>
+
+<div class="app" id="mainApp" style="display:none">
 
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -3010,6 +3037,36 @@ function importData(e) {
     }
   };
   reader.readAsText(file);
+}
+
+
+// ============================================================
+// パスワード保護
+// ============================================================
+// ★ パスワードをここで変更できます
+const APP_PASSWORD = 'daiichi2024';
+
+function checkPassword() {
+  const input = document.getElementById('pwInput').value;
+  if (input === APP_PASSWORD) {
+    document.getElementById('pwScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = '';
+    sessionStorage.setItem('pw_ok', '1');
+  } else {
+    const err = document.getElementById('pwError');
+    err.style.display = 'block';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+    setTimeout(() => { err.style.display = 'none'; }, 2000);
+  }
+}
+
+// セッション中は再入力不要
+if (sessionStorage.getItem('pw_ok') === '1') {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('pwScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = '';
+  });
 }
 
 // ══ ASYNC INIT ══
