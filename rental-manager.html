@@ -146,6 +146,19 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 .sched-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .sched-table tr:last-child td{border-bottom:none;}
 .sched-chip{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;}
+
+/* GDRIVE */
+.gdrive-bar{display:flex;gap:6px;padding:6px 14px 8px;border-bottom:1px solid var(--border);background:var(--surface);align-items:center;}
+.gdrive-btn{flex:1;padding:5px 4px;border:1px solid var(--border);border-radius:var(--rs);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--surface);color:var(--text2);transition:all .1s;text-align:center;}
+.gdrive-btn:hover{background:var(--surface2);}
+.gdrive-btn.gd-connect{color:var(--blue);border-color:var(--blue-l);}
+.gdrive-btn.gd-connect:hover{background:var(--blue-l);}
+.gdrive-btn.gd-save{color:var(--green);border-color:var(--green-l);}
+.gdrive-btn.gd-save:hover{background:var(--green-l);}
+.gdrive-btn.gd-load{color:var(--teal);border-color:var(--teal-l);}
+.gdrive-btn.gd-load:hover{background:var(--teal-l);}
+.gdrive-btn:disabled{opacity:.4;cursor:not-allowed;}
+.gdrive-status{font-size:10px;color:var(--text3);text-align:center;padding:2px 14px 4px;background:var(--surface);}
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
 
@@ -161,6 +174,8 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 .pw-btn:hover{background:#236038;}
 .pw-error{color:#e53935;font-size:13px;margin-top:10px;display:none;}
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
 </head>
 <body>
 
@@ -192,6 +207,12 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
     </div>
     <button class="add-btn" id="addBtn" onclick="openAddModal()">＋ 新規登録</button>
   </div>
+  <div class="gdrive-bar">
+    <button class="gdrive-btn gd-connect" id="gdBtn" onclick="gdSignIn()">🔗 Googleドライブ連携</button>
+    <button class="gdrive-btn gd-save" id="gdSaveBtn" onclick="gdSave()" disabled>☁ 保存</button>
+    <button class="gdrive-btn gd-load" id="gdLoadBtn" onclick="gdLoad()" disabled>☁ 読込み</button>
+  </div>
+  <div class="gdrive-status" id="gdStatus">未接続</div>
   <button style="width:100%;padding:8px 14px;border:none;background:var(--amber-l);color:var(--amber-d);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--border);text-align:left;" onclick="showSchedule()">📅 スケジュール一覧</button>
   <div class="data-bar">
     <button class="data-btn export" onclick="exportData()">📤 エクスポート</button>
@@ -454,6 +475,7 @@ function fd(d) { return d ? d.replace(/-/g,'/') : ''; }
 function save() {
   try { localStorage.setItem('rental_mgmt', JSON.stringify(mgmtProps)); } catch(e){}
   try { localStorage.setItem('rental_brk',  JSON.stringify(brkProps));  } catch(e){}
+  if (typeof scheduleGdSave==='function') scheduleGdSave();
 }
 function load() {
   try { const v=localStorage.getItem('rental_mgmt'); if(v) mgmtProps=JSON.parse(v); } catch(e){}
@@ -921,7 +943,7 @@ function saveNotes() {
 }
 function closeModal(id) { document.getElementById(id).style.display='none'; }
 document.addEventListener('keydown', e=>{
-  if(e.key==='Escape') ['bldModal','roomModal','brkModal','logModal'].forEach(closeModal);
+  if(e.key==='Escape') ['bldModal','roomModal','brkModal','logModal','gdSettingsModal'].forEach(closeModal);
 });
 
 // ============================================================
@@ -1078,6 +1100,150 @@ function showSchedule() {
   renderSidebar();
 }
 
+
+// ============================================================
+// GOOGLE DRIVE 連携
+// ============================================================
+let gdAccessToken = null;
+let gdFileId      = null;
+let gdClientId    = localStorage.getItem('rental_gd_client_id') || '';
+let gdFilename    = localStorage.getItem('rental_gd_filename')  || '賃貸データ.json';
+let gdTokenClient = null;
+let gdUserEmail   = '';
+
+function gdUpdateStatus(msg, connected) {
+  const el = document.getElementById('gdStatus');
+  if (el) el.textContent = msg;
+  document.getElementById('gdSaveBtn').disabled = !connected;
+  document.getElementById('gdLoadBtn').disabled = !connected;
+  const btn = document.getElementById('gdBtn');
+  if (btn) {
+    btn.textContent = connected ? '✅ '+(gdUserEmail||'接続済み') : '🔗 Googleドライブ連携';
+    btn.onclick = connected ? gdSignOut : gdSignIn;
+  }
+}
+
+function gdSignIn() {
+  if (!gdClientId) { openGdSettings(); return; }
+  if (!window.google) { alert('Google APIの読み込み中です。しばらく待ってから再試行してください。'); return; }
+  try {
+    gdTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: gdClientId,
+      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+      callback: async (resp) => {
+        if (resp.error) { alert('認証エラー: ' + resp.error); return; }
+        gdAccessToken = resp.access_token;
+        try {
+          const info = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+gdAccessToken}}).then(r=>r.json());
+          gdUserEmail = info.email||'';
+        } catch(e){}
+        gdUpdateStatus('接続済み: '+gdUserEmail, true);
+        await gdFindFile();
+        if (gdFileId) {
+          if (confirm('Googleドライブにデータが見つかりました。読み込みますか？')) await gdLoad();
+        }
+      }
+    });
+    gdTokenClient.requestAccessToken({prompt:'consent'});
+  } catch(e) {
+    alert('初期化エラー: '+e.message+'\nClient IDが正しいか確認してください。');
+  }
+}
+
+function gdSignOut() {
+  if (!gdAccessToken) return;
+  if (window.google) google.accounts.oauth2.revoke(gdAccessToken,()=>{});
+  gdAccessToken=null; gdFileId=null; gdUserEmail='';
+  gdUpdateStatus('未接続', false);
+}
+
+function openGdSettings() {
+  document.getElementById('gd_client_id').value = gdClientId;
+  document.getElementById('gd_filename').value  = gdFilename;
+  document.getElementById('gdSettingsModal').style.display='flex';
+}
+
+function gdSaveSettings() {
+  const cid = document.getElementById('gd_client_id').value.trim();
+  const fn  = document.getElementById('gd_filename').value.trim()||'賃貸データ.json';
+  if (!cid) { alert('クライアントIDを入力してください'); return; }
+  gdClientId=cid; gdFilename=fn;
+  localStorage.setItem('rental_gd_client_id', cid);
+  localStorage.setItem('rental_gd_filename',  fn);
+  closeModal('gdSettingsModal');
+  gdSignIn();
+}
+
+async function gdFindFile() {
+  if (!gdAccessToken) return;
+  try {
+    const q = encodeURIComponent(`name='${gdFilename}' and mimeType='application/json' and trashed=false`);
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,{headers:{Authorization:'Bearer '+gdAccessToken}}).then(r=>r.json());
+    if (res.files&&res.files.length>0) gdFileId=res.files[0].id;
+  } catch(e){ console.error('gdFindFile',e); }
+}
+
+async function gdSave() {
+  if (!gdAccessToken) { alert('先にGoogleドライブに接続してください'); return; }
+  const btn=document.getElementById('gdSaveBtn');
+  btn.textContent='保存中…'; btn.disabled=true;
+  try {
+    const payload=JSON.stringify({version:1,exportedAt:new Date().toISOString(),mgmtProps,brkProps},null,2);
+    const boundary='boundary_'+Date.now();
+    const meta=JSON.stringify({name:gdFilename,mimeType:'application/json'});
+    const body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--${boundary}--`;
+    const method=gdFileId?'PATCH':'POST';
+    const url=gdFileId
+      ?`https://www.googleapis.com/upload/drive/v3/files/${gdFileId}?uploadType=multipart`
+      :'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    const res=await fetch(url,{method,headers:{Authorization:'Bearer '+gdAccessToken,'Content-Type':`multipart/related; boundary=${boundary}`},body}).then(r=>r.json());
+    if (res.id) {
+      gdFileId=res.id;
+      btn.textContent='✅ 保存完了';
+      setTimeout(()=>{btn.textContent='☁ 保存';btn.disabled=false;},2000);
+    } else throw new Error(JSON.stringify(res));
+  } catch(e) {
+    alert('保存エラー: '+e.message);
+    btn.textContent='☁ 保存'; btn.disabled=false;
+  }
+}
+
+async function gdLoad() {
+  if (!gdAccessToken) { alert('先にGoogleドライブに接続してください'); return; }
+  const btn=document.getElementById('gdLoadBtn');
+  btn.textContent='読込中…'; btn.disabled=true;
+  try {
+    await gdFindFile();
+    if (!gdFileId) { alert('ドライブにデータが見つかりません。先に「☁ 保存」してください。'); btn.textContent='☁ 読込み'; btn.disabled=false; return; }
+    const text=await fetch(`https://www.googleapis.com/drive/v3/files/${gdFileId}?alt=media`,{headers:{Authorization:'Bearer '+gdAccessToken}}).then(r=>r.text());
+    const data=JSON.parse(text);
+    const newMgmt=data.mgmtProps||[];
+    const newBrk=data.brkProps||[];
+    if (!confirm(`Googleドライブから読み込みます。\n\n賃貸管理: ${newMgmt.length}件\n賃貸仲介: ${newBrk.length}件\n\n現在のデータを上書きしますか？`)) {
+      btn.textContent='☁ 読込み'; btn.disabled=false; return;
+    }
+    mgmtProps=newMgmt; brkProps=newBrk;
+    save(); curId=null; renderSidebar(); renderMain();
+    btn.textContent='✅ 読込完了';
+    setTimeout(()=>{btn.textContent='☁ 読込み';btn.disabled=false;},2000);
+    if (mgmtProps.length) { setMode('mgmt'); selectProp(mgmtProps[0].id); }
+    else if (brkProps.length) { setMode('brk'); selectProp(brkProps[0].id); }
+  } catch(e) {
+    alert('読込エラー: '+e.message);
+    btn.textContent='☁ 読込み'; btn.disabled=false;
+  }
+}
+
+function scheduleGdSave() {
+  if (!gdAccessToken) return;
+  clearTimeout(scheduleGdSave._timer);
+  scheduleGdSave._timer = setTimeout(()=>{ gdSave(); }, 3000);
+}
+
+window.addEventListener('load', ()=>{
+  gdUpdateStatus(gdClientId?'Client ID設定済み（未接続）':'未設定 — クリックして設定', false);
+});
+
 // ============================================================
 // INIT
 // ============================================================
@@ -1085,5 +1251,30 @@ load();
 setMode('mgmt');
 if (mgmtProps.length) selectProp(mgmtProps[0].id);
 </script>
+
+<!-- GDRIVE SETTINGS MODAL -->
+<div class="overlay" id="gdSettingsModal" style="display:none">
+<div class="modal" style="max-width:500px">
+  <div class="modal-title">Googleドライブ連携 設定</div>
+  <div style="background:var(--blue-l);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--blue-d)">
+    不動産案件管理ツールと同じClient IDが使えます。<br>
+    別のファイル名で保存されるため、データが混在することはありません。
+  </div>
+  <div class="frow"><label class="flabel">OAuth クライアントID *</label>
+    <input class="fi" id="gd_client_id" placeholder="XXXXXXXXX.apps.googleusercontent.com">
+  </div>
+  <div class="frow"><label class="flabel">保存ファイル名</label>
+    <input class="fi" id="gd_filename" value="賃貸データ.json">
+  </div>
+  <div style="font-size:12px;color:var(--text3);margin-top:4px">
+    ※ 設定はこのブラウザに保存されます。別のPCでも同じClient IDとGoogleアカウントでサインインしてください。
+  </div>
+  <div class="modal-actions">
+    <button class="btn" onclick="closeModal('gdSettingsModal')">キャンセル</button>
+    <button class="btn btn-blue" onclick="gdSaveSettings()">保存して接続</button>
+  </div>
+</div>
+</div>
+
 </body>
 </html>
