@@ -1302,7 +1302,7 @@ function renderSidebar() {
   }).join('');
 }
 
-function selectCase(id) { curId=id; activeTab='ov'; renderSidebar(); renderMain(); }
+function selectCase(id) { if(isModalOpen()) return; curId=id; activeTab='ov'; renderSidebar(); renderMain(); }
 
 // ============================================================
 // MAIN RENDER
@@ -1893,6 +1893,17 @@ function toggleSch(sid) {
 // ============================================================
 // ============================================================
 
+
+// モーダルが開いているか判定
+function isModalOpen() {
+  const modals = ['buyModal','brkModal','meetModal','introModal','permitModal',
+    'photoCapModal','detailModal','estimateModal','planCapModal','customerModal','gdSettingsModal'];
+  return modals.some(id => {
+    const el = document.getElementById(id);
+    return el && el.style.display !== 'none';
+  });
+}
+
 // ── 築年数計算 ──
 function calcBuildAge(builtStr) {
   if (!builtStr) return null;
@@ -2172,7 +2183,7 @@ function saveBuyCase() {
   if(data.parcels.length){const p=data.parcels[0];data.land_chiban=p.chiban;data.land_chimoku=p.chimoku;data.land_area_reg=p.area_reg;data.area=p.area_reg;data.land_area_actual=p.area_actual;data.land_share=p.share;}
   if(isEdit){Object.assign(c,data);}
   else{const nc={id:uid(),...data,meetings:[],intros:[],photos:[],permits:{},notes:'',schedule:buyDefaultSchedule(),createdAt:today()};buyCases.unshift(nc);curId=nc.id;}
-  forceCloseModal('buyModal');save();renderSidebar();renderMain();
+  _skipModalConfirm=true; save();closeModal('buyModal');renderSidebar();renderMain();
 }
 
 // BRK modal
@@ -2219,13 +2230,13 @@ function saveBrkCase() {
   if(data.parcels.length){const p=data.parcels[0];data.land_chiban=p.chiban;data.land_chimoku=p.chimoku;data.land_area_reg=p.area_reg;data.area=p.area_reg;data.land_area_actual=p.area_actual;data.land_share=p.share;}
   if(isEdit){Object.assign(c,data);}
   else{const nc={id:uid(),...data,meetings:[],photos:[],notes:'',schedule:brkDefaultSchedule(),createdAt:today()};brkCases.unshift(nc);curId=nc.id;}
-  forceCloseModal('brkModal');save();renderSidebar();renderMain();
+  _skipModalConfirm=true; save();closeModal('brkModal');renderSidebar();renderMain();
 }
 
 function deleteCurrentCase() {
   if(!confirm('この案件を削除しますか？（元に戻せません）'))return;
-  if(mode==='buy'){buyCases=buyCases.filter(c=>c.id!==curId);forceCloseModal('buyModal');}
-  else{brkCases=brkCases.filter(c=>c.id!==curId);forceCloseModal('brkModal');}
+  if(mode==='buy'){buyCases=buyCases.filter(c=>c.id!==curId);(_skipModalConfirm=true, closeModal('buyModal'));}
+  else{brkCases=brkCases.filter(c=>c.id!==curId);(_skipModalConfirm=true, closeModal('brkModal'));}
   curId=null; save(); renderSidebar(); renderMain();
 }
 
@@ -2414,7 +2425,13 @@ function closeModalWithConfirm(id) {
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeModalWithConfirm('buyModal');closeModalWithConfirm('brkModal');['meetModal','introModal','permitModal','photoCapModal','detailModal','estimateModal','planCapModal','customerModal','gdSettingsModal'].forEach(closeModal);closeLightbox();}
 });
-document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.style.display='none';}));
+document.querySelectorAll('.overlay').forEach(el=>{
+  el.addEventListener('click', e=>{
+    if (e.target !== el) return; // 内側のモーダル本体クリックは無視
+    if (el.id==='buyModal'||el.id==='brkModal') return; // 登録・編集は閉じない
+    el.style.display='none';
+  });
+});
 
 // ============================================================
 // SAMPLE DATA
