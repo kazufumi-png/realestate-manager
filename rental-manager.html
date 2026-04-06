@@ -180,18 +180,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 <body>
 
 <!-- PASSWORD -->
-<div class="pw-screen" id="pwScreen">
-  <div class="pw-box">
-    <div class="pw-logo">🏢</div>
-    <div class="pw-title">賃貸物件管理</div>
-    <div class="pw-sub">第一開発株式会社</div>
-    <input class="pw-input" type="password" id="pwInput" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')checkPw()">
-    <button class="pw-btn" onclick="checkPw()">ログイン</button>
-    <div class="pw-error" id="pwError">パスワードが違います</div>
-  </div>
-</div>
-
-<div class="app" id="mainApp" style="display:none">
+<div class="app">
 
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -439,25 +428,6 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 // ============================================================
 // PASSWORD
 // ============================================================
-const APP_PW = 'daiichi2024';
-function checkPw() {
-  if (document.getElementById('pwInput').value === APP_PW) {
-    document.getElementById('pwScreen').style.display = 'none';
-    document.getElementById('mainApp').style.display = '';
-    sessionStorage.setItem('rental_pw','1');
-  } else {
-    const e = document.getElementById('pwError');
-    e.style.display = 'block';
-    document.getElementById('pwInput').value = '';
-    setTimeout(()=>e.style.display='none', 2000);
-  }
-}
-if (sessionStorage.getItem('rental_pw')==='1') {
-  document.addEventListener('DOMContentLoaded',()=>{
-    document.getElementById('pwScreen').style.display='none';
-    document.getElementById('mainApp').style.display='';
-  });
-}
 
 // ============================================================
 // STATE
