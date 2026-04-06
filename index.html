@@ -1,0 +1,3117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>売買案件管理</title>
+<style>
+:root {
+  --bg:#F5F4F0; --surface:#FFF; --surface2:#F0EEE8;
+  --border:#D6D4CB; --border2:#B8B5AC;
+  --text:#28271F; --text2:#5C5A53; --text3:#96937F;
+  --green:#1A5C3A; --green-l:#EAF3DE; --green-d:#153020;
+  --blue:#185FA5; --blue-l:#E6F1FB; --blue-d:#0C447C;
+  --amber:#854F0B; --amber-l:#FAEEDA; --amber-d:#633806;
+  --red:#A32D2D; --red-l:#FCEBEB; --red-d:#791F1F;
+  --teal:#0F6E56; --teal-l:#E1F5EE; --teal-d:#085041;
+  --gray-l:#F1EFE8; --gray-m:#888780;
+  --r:10px; --rs:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh;}
+.app{display:flex;height:100vh;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:272px;min-width:272px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sb-top{padding:14px;border-bottom:1px solid var(--border);}
+.mode-sw{display:flex;background:var(--surface2);border-radius:var(--rs);padding:3px;margin-bottom:12px;gap:3px;}
+.mode-btn{flex:1;padding:6px 4px;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:var(--text3);transition:all .15s;}
+.mode-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.sw-wrap{position:relative;margin-bottom:10px;}
+.sw-wrap input{width:100%;padding:7px 10px 7px 28px;border:1px solid var(--border);border-radius:var(--rs);font-size:13px;background:var(--surface2);color:var(--text);outline:none;font-family:inherit;}
+.sw-wrap input:focus{border-color:var(--blue);background:var(--surface);}
+.sw-ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);}
+.add-btn{width:100%;padding:9px;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;color:#fff;}
+.add-btn.buy{background:var(--green);}
+.add-btn.buy:hover{background:var(--green-d);}
+.add-btn.brk{background:var(--blue);}
+.add-btn.brk:hover{background:var(--blue-d);}
+.filter-bar{padding:8px 14px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;}
+.fchip{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);transition:all .1s;}
+.fchip.active.buy{background:var(--green);color:#fff;border-color:var(--green);}
+.fchip.active.brk{background:var(--blue);color:#fff;border-color:var(--blue);}
+.prop-list{flex:1;overflow-y:auto;padding:6px 0;}
+.pi{padding:10px 14px;cursor:pointer;border-left:3px solid transparent;transition:background .1s;}
+.pi:hover{background:var(--surface2);}
+.pi.active.buy{background:var(--green-l);border-left-color:var(--green);}
+.pi.active.brk{background:var(--blue-l);border-left-color:var(--blue);}
+.pi-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pi-sub{font-size:11px;color:var(--text3);display:flex;gap:6px;align-items:center;}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;background:var(--bg);}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);gap:8px;}
+
+/* HEADER */
+.det-hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 26px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.det-title{font-size:19px;font-weight:800;margin-bottom:6px;letter-spacing:-.02em;}
+.det-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.badge{padding:3px 9px;border-radius:4px;font-size:11px;font-weight:700;}
+
+/* PROGRESS */
+.prog-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 26px;}
+.stage-track{display:flex;align-items:center;}
+.snode{display:flex;flex-direction:column;align-items:center;flex:1;position:relative;cursor:pointer;}
+.snode:not(:last-child)::after{content:'';position:absolute;top:14px;left:50%;width:100%;height:2px;background:var(--border);z-index:0;}
+.snode.done:not(:last-child)::after{background:var(--green);}
+.snode.done.brk:not(:last-child)::after{background:var(--blue);}
+.scirc{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;position:relative;z-index:1;transition:all .2s;}
+.snode.done .scirc{background:var(--green);border-color:var(--green);color:#fff;}
+.snode.done.brk .scirc{background:var(--blue);border-color:var(--blue);color:#fff;}
+.snode.current .scirc{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 3px var(--blue-l);}
+.slabel{font-size:10px;color:var(--text3);margin-top:4px;text-align:center;white-space:nowrap;}
+.snode.current .slabel{color:var(--blue);font-weight:700;}
+.snode.done .slabel{color:var(--green);}
+.snode.done.brk .slabel{color:var(--blue);}
+
+/* TABS */
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 26px;display:flex;overflow-x:auto;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:11px 13px;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .1s;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+
+/* CONTENT */
+.tc{padding:22px 26px;display:none;}
+.tc.active{display:block;}
+.sec{margin-bottom:24px;}
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.sec-title{font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;}
+
+/* CARDS */
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.ic{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;}
+.ic-l{font-size:11px;color:var(--text3);margin-bottom:3px;font-weight:600;}
+.ic-v{font-size:15px;font-weight:700;color:var(--text);}
+
+/* PRICE TABLE */
+.pt{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.pt-row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;}
+.pt-row:last-child{border-bottom:none;}
+.pt-l{font-size:13px;color:var(--text2);width:140px;flex-shrink:0;}
+.pt-v{font-size:15px;font-weight:700;flex:1;}
+.pt-n{font-size:11px;color:var(--text3);}
+.pt-row.hl{background:var(--green-l);}
+.pt-row.hl .pt-l{color:var(--green-d);font-weight:700;}
+.pt-row.hl .pt-v{color:var(--green);}
+.pt-row.hl-b{background:var(--blue-l);}
+.pt-row.hl-b .pt-l{color:var(--blue-d);font-weight:700;}
+.pt-row.hl-b .pt-v{color:var(--blue);}
+
+/* INTRO TABLE */
+.it{width:100%;border-collapse:collapse;font-size:13px;}
+.it th{background:var(--surface2);padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);border-bottom:1px solid var(--border);}
+.it td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.it tr:last-child td{border-bottom:none;}
+.it tr:hover td{background:var(--surface2);}
+
+/* MEETINGS */
+.meeting-list{display:flex;flex-direction:column;gap:12px;}
+.mcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;}
+.mc-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.mc-title{font-size:14px;font-weight:700;}
+.mc-date{font-size:11px;color:var(--text3);flex-shrink:0;}
+.mc-body{font-size:13px;color:var(--text2);line-height:1.8;white-space:pre-wrap;background:var(--surface2);border-radius:var(--rs);padding:12px 14px;}
+.mc-meta{font-size:12px;color:var(--text3);margin-bottom:10px;}
+.mc-next{margin-top:10px;padding:8px 12px;background:var(--amber-l);border-radius:var(--rs);font-size:12px;color:var(--amber-d);font-weight:600;}
+.mc-tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.tag{padding:2px 7px;border-radius:3px;font-size:11px;font-weight:700;}
+
+/* SCHEDULE */
+.sch-list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.sch-row{display:flex;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);gap:12px;}
+.sch-row:last-child{border-bottom:none;}
+.sch-chk{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;transition:all .15s;}
+.sch-chk.done{background:var(--green);border-color:var(--green);color:#fff;}
+.sch-label{flex:1;font-size:13px;}
+.sch-label.done{text-decoration:line-through;color:var(--text3);}
+.sch-date{font-size:12px;color:var(--text3);min-width:90px;text-align:right;}
+
+/* NOTES */
+.notes-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;}
+.notes-wrap textarea{width:100%;min-height:180px;border:none;outline:none;font-size:13px;font-family:inherit;color:var(--text);background:transparent;resize:vertical;line-height:1.75;}
+
+/* PERMITS */
+.permit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.permit-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.pc-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.pc-title{font-size:13px;font-weight:800;}
+.pc-body{padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.pc-row{display:flex;gap:8px;}
+.pc-l{font-size:11px;color:var(--text3);font-weight:600;width:90px;flex-shrink:0;padding-top:2px;}
+.pc-v{font-size:13px;color:var(--text);flex:1;}
+.ps{padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap;}
+.ps-不要{background:var(--gray-l);color:var(--text2);}
+.ps-未申請{background:var(--amber-l);color:var(--amber-d);}
+.ps-申請準備中{background:var(--blue-l);color:var(--blue-d);}
+.ps-申請済み{background:var(--teal-l);color:var(--teal-d);}
+.ps-許可済み{background:var(--green-l);color:var(--green-d);}
+.ps-不許可{background:var(--red-l);color:var(--red-d);}
+.ps-未設定{background:var(--gray-l);color:var(--text3);}
+
+/* PHOTOS */
+.drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface);margin-bottom:16px;}
+.drop-zone:hover,.drop-zone.over{border-color:var(--blue);background:var(--blue-l);}
+.drop-zone input{display:none;}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.photo-item{position:relative;border-radius:var(--rs);overflow:hidden;border:1px solid var(--border);background:var(--surface2);aspect-ratio:4/3;}
+.photo-item img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;}
+.photo-pdf{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;padding:8px;}
+.photo-pdf span{font-size:28px;}
+.photo-pdf div{font-size:11px;color:var(--text2);font-weight:600;width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.photo-ov{position:absolute;inset:0;background:rgba(0,0,0,0);transition:background .15s;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none;}
+.photo-item:hover .photo-ov{background:rgba(0,0,0,.45);}
+.photo-info{padding:6px 8px;opacity:0;transition:opacity .15s;}
+.photo-item:hover .photo-info{opacity:1;}
+.photo-name{font-size:11px;color:#fff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.photo-cat{position:absolute;top:5px;left:5px;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;background:rgba(0,0,0,.55);color:#fff;z-index:2;}
+.photo-del{position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:rgba(163,45,45,.9);color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;z-index:2;}
+.photo-item:hover .photo-del{opacity:1;}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:2000;padding:20px;flex-direction:column;gap:12px;}
+.lightbox img{max-width:100%;max-height:80vh;border-radius:var(--rs);object-fit:contain;}
+.lb-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1;}
+.lb-cap{color:rgba(255,255,255,.75);font-size:13px;}
+
+/* BUTTONS */
+.btn{padding:7px 13px;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:background .1s;}
+.btn:hover{background:var(--surface2);}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green);}
+.btn-green:hover{background:var(--green-d);}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-blue:hover{background:var(--blue-d);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-danger{color:var(--red);border-color:var(--red-l);}
+.btn-danger:hover{background:var(--red-l);}
+.del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px;line-height:1;}
+.del-btn:hover{color:var(--red);}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(40,39,31,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;}
+.modal{background:var(--surface);border-radius:var(--r);width:100%;max-width:560px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:20px;}
+.frow{margin-bottom:13px;}
+.flabel{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px;display:block;}
+.fi{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;}
+.fi:focus{border-color:var(--blue);}
+textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.f3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;}
+.mdiv{border-top:1px solid var(--border);margin:14px 0;}
+.msub{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;letter-spacing:.05em;}
+
+/* STATUS DOTS */
+.dot-情報入手,.dot-媒介契約{background:var(--gray-m);}
+.dot-現地確認,.dot-物件調査{background:var(--blue);}
+.dot-査定中,.dot-広告・募集{background:var(--amber);}
+.dot-売主交渉,.dot-内覧対応{background:#993556;}
+.dot-契約準備,.dot-条件交渉{background:var(--teal);}
+.dot-契約済み,.dot-契約締結{background:var(--green);}
+.dot-完了,.dot-引渡完了{background:var(--gray-m);}
+.dot-見送り{background:var(--red);}
+
+
+.paste-ta{width:100%;min-height:140px;padding:10px;border:1px solid var(--border);border-radius:var(--rs);font-size:12px;font-family:inherit;color:var(--text);resize:vertical;outline:none;line-height:1.7;}
+.paste-ta:focus{border-color:var(--blue);}
+
+/* LAND PARCEL ROWS */
+.land-parcel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px;position:relative;}
+.land-parcel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.land-parcel-title{font-size:12px;font-weight:800;color:var(--text2);}
+.land-parcel-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:3px;}
+.land-parcel-del:hover{background:var(--red-l);color:var(--red);}
+.land-add-btn{width:100%;padding:8px;border:1px dashed var(--border2);border-radius:var(--rs);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;transition:all .1s;margin-top:4px;}
+.land-add-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-l);}
+.land-total-row{background:var(--green-l);border:1px solid var(--border);border-radius:var(--rs);padding:10px 14px;display:flex;gap:20px;flex-wrap:wrap;margin-top:8px;}
+.land-total-item{font-size:13px;color:var(--text2);}
+.land-total-item strong{color:var(--green-d);font-weight:800;}
+
+/* DRAG SORT */
+.pi{cursor:grab;}
+.pi.dragging{opacity:.4;background:var(--surface2);}
+.pi.drag-over{border-top:2px solid var(--blue);}
+
+/* COMBO SELECT+INPUT */
+.combo-wrap{display:flex;flex-direction:column;gap:4px;}
+.combo-sel{width:100%;}
+.combo-input{width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--rs);font-size:12px;font-family:inherit;color:var(--text);background:var(--surface2);outline:none;display:none;}
+.combo-input.show{display:block;}
+.combo-input:focus{border-color:var(--blue);background:var(--surface);}
+/* RESTRICT ROWS */
+.restrict-row{display:flex;gap:6px;margin-bottom:6px;align-items:center;}
+.restrict-row input{flex:1;}
+.restrict-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 4px;flex-shrink:0;}
+.restrict-del:hover{color:var(--red);}
+.restrict-add-btn{width:100%;padding:6px;border:1px dashed var(--border2);border-radius:var(--rs);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;transition:all .1s;margin-top:2px;}
+.restrict-add-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-l);}
+
+/* CUSTOMER CARDS */
+.cust-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px;}
+.cust-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.cust-name{font-size:14px;font-weight:800;}
+.cust-badge{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;}
+.cust-body{padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.cust-row{display:flex;gap:10px;font-size:13px;}
+.cust-label{color:var(--text3);font-weight:600;width:80px;flex-shrink:0;}
+.cust-val{color:var(--text2);flex:1;}
+.cust-note{font-size:13px;color:var(--text2);line-height:1.75;white-space:pre-wrap;background:var(--surface2);border-radius:var(--rs);padding:10px 12px;}
+.cust-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+
+/* GDRIVE */
+.gdrive-bar{display:flex;gap:6px;padding:6px 14px 8px;border-bottom:1px solid var(--border);background:var(--surface);align-items:center;}
+.gdrive-btn{flex:1;padding:5px 4px;border:1px solid var(--border);border-radius:var(--rs);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--surface);color:var(--text2);transition:all .1s;text-align:center;}
+.gdrive-btn:hover{background:var(--surface2);}
+.gdrive-btn.gd-connect{color:var(--blue);border-color:var(--blue-l);}
+.gdrive-btn.gd-connect:hover{background:var(--blue-l);}
+.gdrive-btn.gd-save{color:var(--green);border-color:var(--green-l);}
+.gdrive-btn.gd-save:hover{background:var(--green-l);}
+.gdrive-btn.gd-load{color:var(--teal);border-color:var(--teal-l);}
+.gdrive-btn.gd-load:hover{background:var(--teal-l);}
+.gdrive-btn:disabled{opacity:.4;cursor:not-allowed;}
+.gdrive-status{font-size:10px;color:var(--text3);text-align:center;padding:2px 14px 4px;background:var(--surface);}
+
+/* PASSWORD SCREEN */
+.pw-screen{position:fixed;inset:0;background:#1a1a1a;display:flex;align-items:center;justify-content:center;z-index:9999;}
+.pw-box{background:#fff;border-radius:12px;padding:40px 36px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center;}
+.pw-logo{font-size:32px;margin-bottom:8px;}
+.pw-title{font-size:18px;font-weight:800;color:#1a1a1a;margin-bottom:4px;}
+.pw-sub{font-size:12px;color:#888;margin-bottom:24px;}
+.pw-input{width:100%;padding:12px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px;font-family:inherit;outline:none;box-sizing:border-box;transition:border .15s;text-align:center;letter-spacing:2px;}
+.pw-input:focus{border-color:#2d7d46;}
+.pw-btn{width:100%;padding:12px;background:#2d7d46;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:12px;transition:background .15s;}
+.pw-btn:hover{background:#236038;}
+.pw-error{color:#e53935;font-size:13px;margin-top:10px;display:none;}
+.pw-hint{font-size:11px;color:#aaa;margin-top:16px;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
+</head>
+<body>
+
+
+<div class="app">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-top">
+    <div class="mode-sw">
+      <button class="mode-btn active" id="mb-buy" onclick="setMode('buy')">分譲地買取</button>
+      <button class="mode-btn" id="mb-brk" onclick="setMode('brk')">売買仲介</button>
+    </div>
+    <div class="sw-wrap">
+      <span class="sw-ico">🔍</span>
+      <input type="text" id="searchInput" placeholder="案件を検索..." oninput="renderSidebar()">
+    </div>
+    <button class="add-btn buy" id="addBtn" onclick="openAddModal()">＋ 新規案件を登録</button>
+  </div>
+  <div class="gdrive-bar">
+    <button class="gdrive-btn gd-connect" id="gdBtn" onclick="gdSignIn()">🔗 Googleドライブ連携</button>
+    <button class="gdrive-btn gd-save" id="gdSaveBtn" onclick="gdSave()" disabled>☁ 保存</button>
+    <button class="gdrive-btn gd-load" id="gdLoadBtn" onclick="gdLoad()" disabled>☁ 読込み</button>
+  </div>
+  <div class="gdrive-status" id="gdStatus">未接続</div>
+
+  <div class="filter-bar" id="filterBar">
+    <span class="fchip active buy" data-s="all" onclick="setFilter(this)">すべて</span>
+    <span class="fchip buy" data-s="active" onclick="setFilter(this)">進行中</span>
+    <span class="fchip buy" data-s="done" onclick="setFilter(this)">契約済み</span>
+    <span class="fchip buy" data-s="ng" onclick="setFilter(this)">見送り</span>
+  </div>
+  <div class="prop-list" id="caseList"></div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="mainArea">
+  <div class="empty"><div style="font-size:36px">🏗</div>
+    <div style="font-size:15px;font-weight:700;color:var(--text2)">案件を選択してください</div>
+    <div style="font-size:13px">左から案件を選ぶか、新規登録してください</div>
+  </div>
+</div>
+</div>
+
+<!-- ======= MODALS ======= -->
+
+<!-- BUY: ADD/EDIT CASE -->
+<div class="overlay" id="buyModal" style="display:none">
+<div class="modal" style="max-width:700px">
+  <div class="modal-title" id="buyModalTitle">新規案件登録（分譲地買取）</div>
+
+
+  <div class="msub">▍ 基本情報</div>
+  <div class="frow"><label class="flabel">案件名 *</label><input class="fi" id="by_name" placeholder="例: 裾野市○○ 分譲地買取"></div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">所在地</label><input class="fi" id="by_addr" placeholder="静岡県裾野市…"></div>
+    <div class="frow"><label class="flabel">情報入手元</label><input class="fi" id="by_source"></div>
+  </div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">担当者</label><input class="fi" id="by_owner"></div>
+    <div class="frow"><label class="flabel">ステータス</label>
+      <select class="fi" id="by_status">
+        <option>情報入手</option><option>現地確認</option><option>査定中</option>
+        <option>売主交渉</option><option>契約準備</option><option>契約済み</option><option>完了</option><option>見送り</option>
+      </select></div>
+    <div class="frow"><label class="flabel">情報入手日</label><input class="fi" type="date" id="by_infodate"></div>
+  </div>
+
+  <div class="mdiv"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="msub" style="margin-bottom:0">▍ 土地（複数筆対応）</div>
+    <button class="land-add-btn" style="width:auto;padding:5px 12px" onclick="addLandParcel('by')">＋ 筆を追加</button>
+  </div>
+  <div id="by-parcels-wrap"></div>
+  <div id="by-land-total" style="display:none" class="land-total-row">
+    <div class="land-total-item">地積合計（登記）: <strong id="by-total-reg">—</strong></div>
+    <div class="land-total-item">実測合計: <strong id="by-total-actual">—</strong></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 都市計画・法令制限</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">用途地域</label><input class="fi" id="by_zone" placeholder="例: 第一種低層住居専用"></div>
+    <div class="frow"><label class="flabel">建ぺい率</label><input class="fi" id="by_kenpeir" placeholder="例: 60%"></div>
+    <div class="frow"><label class="flabel">容積率</label><input class="fi" id="by_yosekir" placeholder="例: 200%"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">都市計画区域</label>
+      <select class="fi" id="by_toshi_kuiki">
+        <option value="">—</option><option>市街化区域</option><option>市街化調整区域</option>
+        <option>非線引き都市計画区域</option><option>都市計画区域外</option>
+      </select></div>
+    <div class="frow">
+      <label class="flabel">その他制限</label>
+      <div id="by-restrict-wrap"></div>
+      <button class="restrict-add-btn" onclick="addRestrictRow('by')">＋ 制限を追加</button>
+    </div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 接道・前面道路</div>
+  <div id="by-roads-wrap"></div>
+  <button class="road-add-btn" onclick="addRoadRow('by')" id="by-road-add-btn">＋ 道路を追加</button>
+
+
+  <div class="mdiv"></div><div class="msub">▍ 設備・インフラ</div>
+  <div class="f2">
+        <div class="frow"><label class="flabel">上水道</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="by_inf_water" onchange="comboChange('by_inf_water','by_inf_water_custom')">
+        <option value="">—</option>
+        <option>公営水道（引込済）</option>
+        <option>公営水道（引込なし）</option>
+        <option>井戸</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="by_inf_water_custom" placeholder="上水道について直接入力">
+    </div>
+    </div>
+        <div class="frow"><label class="flabel">下水道</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="by_inf_sewer" onchange="comboChange('by_inf_sewer','by_inf_sewer_custom')">
+        <option value="">—</option>
+        <option>公共下水（接続済）</option>
+        <option>公共下水（接続なし）</option>
+        <option>浄化槽</option>
+        <option>汲み取り</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="by_inf_sewer_custom" placeholder="下水道について直接入力">
+    </div>
+    </div>
+  </div>
+  <div class="f2">
+        <div class="frow"><label class="flabel">ガス</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="by_inf_gas" onchange="comboChange('by_inf_gas','by_inf_gas_custom')">
+        <option value="">—</option>
+        <option>都市ガス（引込済）</option>
+        <option>都市ガス（引処なし）</option>
+        <option>プロパンガス</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="by_inf_gas_custom" placeholder="ガスについて直接入力">
+    </div>
+    </div>
+        <div class="frow"><label class="flabel">電気</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="by_inf_elec" onchange="comboChange('by_inf_elec','by_inf_elec_custom')">
+        <option value="">—</option>
+        <option>東京電力（引込済）</option>
+        <option>東京電力（引込なし）</option>
+        <option>引込なし</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="by_inf_elec_custom" placeholder="電気について直接入力">
+    </div>
+    </div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 登記情報</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">所有者（土地）</label><input class="fi" id="by_reg_owner" placeholder="登記上の所有者"></div>
+    <div class="frow"><label class="flabel">抵当権・その他権利</label><input class="fi" id="by_reg_mortgage" placeholder="例: ○○銀行 抵当権設定あり"></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 売主情報</div>
+  <div class="frow"><label class="flabel">売主氏名</label><input class="fi" id="by_seller"></div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">売主連絡先</label><input class="fi" id="by_seller_tel"></div>
+    <div class="frow"><label class="flabel">売主希望価格</label><input class="fi" id="by_ask_price" placeholder="例: 9,500万円"></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 価格・分譲計画</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">査定価格</label><input class="fi" id="by_appraisal"></div>
+    <div class="frow"><label class="flabel">買取提示価格</label><input class="fi" id="by_offer"></div>
+    <div class="frow"><label class="flabel">成約価格</label><input class="fi" id="by_deal"></div>
+  </div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">想定区画数</label><input class="fi" id="by_lots"></div>
+    <div class="frow"><label class="flabel">販売想定単価</label><input class="fi" id="by_lot_price"></div>
+    <div class="frow"><label class="flabel">想定売上合計</label><input class="fi" id="by_gross"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">契約予定日</label><input class="fi" type="date" id="by_contract_date"></div>
+    <div class="frow"><label class="flabel">引渡・決済予定日</label><input class="fi" type="date" id="by_settlement_date"></div>
+  </div>
+  <div class="frow"><label class="flabel">メモ</label><textarea class="fi" id="by_memo"></textarea></div>
+  <div class="modal-actions">
+    <button class="btn btn-danger" id="buyDeleteBtn" onclick="deleteCurrentCase()" style="display:none">削除</button>
+    <div style="flex:1"></div>
+    <button class="btn" onclick="closeModalWithConfirm('buyModal')">キャンセル</button>
+    <button class="btn btn-green" id="buySaveBtn" onclick="saveBuyCase()">登録する</button>
+  </div>
+</div></div>
+
+<!-- BRK: ADD/EDIT CASE -->
+<div class="overlay" id="brkModal" style="display:none">
+<div class="modal" style="max-width:700px">
+  <div class="modal-title" id="brkModalTitle">新規案件登録（売買仲介）</div>
+
+
+  <div class="msub">▍ 基本情報</div>
+  <div class="frow"><label class="flabel">案件名 *</label><input class="fi" id="bk_name" placeholder="例: 裾野市平松 戸建売却"></div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">所在地</label><input class="fi" id="bk_addr"></div>
+    <div class="frow"><label class="flabel">担当者</label><input class="fi" id="bk_owner"></div>
+  </div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">物件種別</label>
+      <select class="fi" id="bk_prop_type">
+        <option>土地</option><option>土地・建物</option><option>建物（戸建）</option><option>マンション</option><option>農地</option><option>その他</option>
+      </select></div>
+    <div class="frow"><label class="flabel">ステータス</label>
+      <select class="fi" id="bk_status">
+        <option>媒介契約</option><option>物件調査</option><option>広告・募集</option>
+        <option>内覧対応</option><option>条件交渉</option><option>契約締結</option><option>引渡完了</option><option>見送り</option>
+      </select></div>
+    <div class="frow"><label class="flabel">媒介種別</label>
+      <select class="fi" id="bk_mediation">
+        <option>専任媒介</option><option>専属専任媒介</option><option>一般媒介</option>
+      </select></div>
+  </div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">媒介開始日</label><input class="fi" type="date" id="bk_med_start"></div>
+    <div class="frow"><label class="flabel">媒介満了日</label><input class="fi" type="date" id="bk_med_end"></div>
+    <div class="frow"></div>
+  </div>
+
+  <div class="mdiv"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="msub" style="margin-bottom:0">▍ 土地（複数筆対応）</div>
+    <button class="land-add-btn" style="width:auto;padding:5px 12px" onclick="addLandParcel('bk')">＋ 筆を追加</button>
+  </div>
+  <div id="bk-parcels-wrap"></div>
+  <div id="bk-land-total" style="display:none" class="land-total-row">
+    <div class="land-total-item">地積合計（登記）: <strong id="bk-total-reg">—</strong></div>
+    <div class="land-total-item">実測合計: <strong id="bk-total-actual">—</strong></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 建物</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">主体構造</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="bk_bld_struct_main" onchange="comboChange('bk_bld_struct_main','bk_bld_struct_main_custom')">
+        <option value="">—</option>
+        <option>木造</option>
+        <option>軽量鉄骨造</option>
+        <option>重量鉄骨造</option>
+        <option>鉄筋コンクリート造</option>
+        <option>鉄骨鉄筋コンクリート造</option>
+        <option>ブロック造</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="bk_bld_struct_main_custom" placeholder="例: 組積造など">
+    </div>
+    </div>
+    <div class="frow"><label class="flabel">屋根材</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="bk_bld_roof" onchange="comboChange('bk_bld_roof','bk_bld_roof_custom')">
+        <option value="">—</option>
+        <option>スレート（コロニアル）</option>
+        <option>ガルバリウム鋼板</option>
+        <option>瓦（陶器瓦）</option>
+        <option>瓦（セメント瓦）</option>
+        <option>アスファルトシングル</option>
+        <option>金属板</option>
+        <option>折板屋根</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="bk_bld_roof_custom" placeholder="例: 銅板葺きなど">
+    </div>
+    </div>
+    <div class="frow"><label class="flabel">階数</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="bk_bld_floors" onchange="comboChange('bk_bld_floors','bk_bld_floors_custom')">
+        <option value="">—</option>
+        <option>平屋（1階）</option>
+        <option>2階建</option>
+        <option>3階建</option>
+        <option>4階建以上</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="bk_bld_floors_custom" placeholder="例: 地下1階地上3階など">
+    </div>
+    </div>
+  </div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">築年月</label>
+      <input class="fi" id="bk_bld_built" placeholder="例: 2003年3月" oninput="updateBldAgeDisp('bk_bld_built','bk_bld_age_disp')">
+      <span style="font-size:11px;color:var(--text3);margin-top:3px;display:block">＝ <span id="bk_bld_age_disp" style="font-weight:600;color:var(--text2)">—</span></span>
+    </div>
+    <div class="frow"><label class="flabel">間取り</label><input class="fi" id="bk_bld_layout" placeholder="例: 4LDK"></div>
+    <div class="frow"><label class="flabel">持分（建物）</label><input class="fi" id="bk_bld_share" placeholder="例: 全部"></div>
+  </div>
+  <div style="background:var(--surface2);border-radius:var(--rs);padding:12px 14px;margin-bottom:13px">
+    <div class="msub" style="margin-bottom:10px">床面積（㎡）</div>
+    <div class="f3">
+      <div class="frow"><label class="flabel">1階</label><input class="fi" id="bk_bld_area_1f" placeholder="例: 67.23" oninput="calcBldTotal('bk')"></div>
+      <div class="frow"><label class="flabel">2階</label><input class="fi" id="bk_bld_area_2f" placeholder="例: 55.80" oninput="calcBldTotal('bk')"></div>
+      <div class="frow"><label class="flabel">3階以上</label><input class="fi" id="bk_bld_area_3f" placeholder="例: 0" oninput="calcBldTotal('bk')"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--text3);font-weight:700">合計（登記）</span>
+      <input class="fi" id="bk_bld_area_reg" placeholder="自動計算" style="max-width:120px;font-weight:700;background:var(--green-l)" readonly>
+      <span style="font-size:12px;color:var(--text3)">㎡</span>
+    </div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">所有者（建物）</label><input class="fi" id="bk_reg_owner_bld"></div>
+    <div class="frow"><label class="flabel">建物の表示（地番）</label><input class="fi" id="bk_bld_chiban" placeholder="例: 289番地1"></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 都市計画・法令制限</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">用途地域</label><input class="fi" id="bk_zone" placeholder="例: 第一種低層住居専用"></div>
+    <div class="frow"><label class="flabel">建ぺい率</label><input class="fi" id="bk_kenpeir" placeholder="例: 60%"></div>
+    <div class="frow"><label class="flabel">容積率</label><input class="fi" id="bk_yosekir" placeholder="例: 200%"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">都市計画区域</label>
+      <select class="fi" id="bk_toshi_kuiki">
+        <option value="">—</option><option>市街化区域</option><option>市街化調整区域</option>
+        <option>非線引き都市計画区域</option><option>都市計画区域外</option>
+      </select></div>
+    <div class="frow">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <label class="flabel" style="margin:0">その他制限</label>
+      </div>
+      <div id="bk-restrict-wrap"></div>
+      <button class="restrict-add-btn" onclick="addRestrictRow('bk')">＋ 制限を追加</button>
+    </div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 接道・前面道路</div>
+  <div id="bk-roads-wrap"></div>
+  <button class="road-add-btn" onclick="addRoadRow('bk')" id="bk-road-add-btn">＋ 道路を追加</button>
+
+
+  <div class="mdiv"></div><div class="msub">▍ 登記情報</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">所有者（土地）</label><input class="fi" id="bk_reg_owner"></div>
+    <div class="frow"><label class="flabel">抵当権・その他権利</label><input class="fi" id="bk_reg_mortgage" placeholder="例: ○○銀行 抵当権設定あり"></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 設備・インフラ</div>
+  <div class="f2">
+        <div class="frow"><label class="flabel">上水道</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="bk_inf_water" onchange="comboChange('bk_inf_water','bk_inf_water_custom')">
+        <option value="">—</option>
+        <option>公営水道（引込済）</option>
+        <option>公営水道（引込なし）</option>
+        <option>井戸</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="bk_inf_water_custom" placeholder="上水道について直接入力">
+    </div>
+    </div>
+        <div class="frow"><label class="flabel">下水道</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="bk_inf_sewer" onchange="comboChange('bk_inf_sewer','bk_inf_sewer_custom')">
+        <option value="">—</option>
+        <option>公共下水（接続済）</option>
+        <option>公共下水（接続なし）</option>
+        <option>浄化槽</option>
+        <option>汲み取り</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="bk_inf_sewer_custom" placeholder="下水道について直接入力">
+    </div>
+    </div>
+  </div>
+  <div class="f2">
+        <div class="frow"><label class="flabel">ガス</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="bk_inf_gas" onchange="comboChange('bk_inf_gas','bk_inf_gas_custom')">
+        <option value="">—</option>
+        <option>都市ガス（引込済）</option>
+        <option>都市ガス（引込なし）</option>
+        <option>プロパンガス</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="bk_inf_gas_custom" placeholder="ガスについて直接入力">
+    </div>
+    </div>
+        <div class="frow"><label class="flabel">電気</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="bk_inf_elec" onchange="comboChange('bk_inf_elec','bk_inf_elec_custom')">
+        <option value="">—</option>
+        <option>東京電力（引込済）</option>
+        <option>東京電力（引込なし）</option>
+        <option>引込なし</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="bk_inf_elec_custom" placeholder="電気について直接入力">
+    </div>
+    </div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 価格</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">売主希望価格</label><input class="fi" id="bk_ask_price"></div>
+    <div class="frow"><label class="flabel">査定価格</label><input class="fi" id="bk_appraisal"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">売出価格</label><input class="fi" id="bk_sale_price"></div>
+    <div class="frow"><label class="flabel">成約価格</label><input class="fi" id="bk_deal_price"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">契約予定日</label><input class="fi" type="date" id="bk_contract_date"></div>
+    <div class="frow"><label class="flabel">引渡・決済予定日</label><input class="fi" type="date" id="bk_settlement_date"></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 売主情報</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">売主氏名</label><input class="fi" id="bk_seller"></div>
+    <div class="frow"><label class="flabel">連絡先</label><input class="fi" id="bk_seller_tel"></div>
+    <div class="frow"><label class="flabel">住所</label><input class="fi" id="bk_seller_addr"></div>
+  </div>
+  <div class="mdiv"></div><div class="msub">▍ 買主情報</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">買主氏名</label><input class="fi" id="bk_buyer"></div>
+    <div class="frow"><label class="flabel">連絡先</label><input class="fi" id="bk_buyer_tel"></div>
+    <div class="frow"><label class="flabel">資金計画</label><input class="fi" id="bk_buyer_finance" placeholder="例: 住宅ローン・自己資金2割"></div>
+  </div>
+  <div class="mdiv"></div><div class="msub">▍ 相手方業者</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">会社名</label><input class="fi" id="bk_other_agency" placeholder="（両手の場合は空欄）"></div>
+    <div class="frow"><label class="flabel">担当者</label><input class="fi" id="bk_other_agent"></div>
+    <div class="frow"><label class="flabel">連絡先</label><input class="fi" id="bk_other_tel"></div>
+  </div>
+  <div class="mdiv"></div>
+  <div class="frow"><label class="flabel">メモ</label><textarea class="fi" id="bk_memo"></textarea></div>
+  <div class="modal-actions">
+    <button class="btn btn-danger" id="brkDeleteBtn" onclick="deleteCurrentCase()" style="display:none">削除</button>
+    <div style="flex:1"></div>
+    <button class="btn" onclick="closeModalWithConfirm('brkModal')">キャンセル</button>
+    <button class="btn btn-blue" id="brkSaveBtn" onclick="saveBrkCase()">登録する</button>
+  </div>
+</div></div>
+
+<!-- MEETING ADD/EDIT -->
+<div class="overlay" id="meetModal" style="display:none">
+<div class="modal" style="max-width:680px">
+  <div class="modal-title" id="meetModalTitle">打合せ記録を追加</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">日付 *</label><input class="fi" type="date" id="m_date"></div>
+    <div class="frow"><label class="flabel">種別</label>
+      <select class="fi" id="m_type">
+        <option>現地確認</option><option>売主打合せ</option><option>価格交渉</option>
+        <option>内覧対応</option><option>業者打合せ</option><option>社内協議</option>
+        <option>契約締結</option><option>電話・メール</option><option>その他</option>
+      </select></div>
+  </div>
+  <div class="frow"><label class="flabel">タイトル（任意）</label><input class="fi" id="m_title"></div>
+  <div class="frow"><label class="flabel">内容 *</label><textarea class="fi" id="m_body" style="min-height:200px" placeholder="打合せ内容・決定事項・次アクション"></textarea></div>
+  <div class="frow"><label class="flabel">参加者</label><input class="fi" id="m_members"></div>
+  <div class="frow"><label class="flabel">次回アクション</label><input class="fi" id="m_next"></div>
+  <div class="modal-actions">
+    <button class="btn" onclick="closeModal('meetModal')">キャンセル</button>
+    <button class="btn btn-blue" id="meetSaveBtn" onclick="saveMeeting()">保存する</button>
+  </div>
+</div></div>
+
+<!-- BUY: INTRO -->
+<div class="overlay" id="introModal" style="display:none">
+<div class="modal" style="max-width:460px">
+  <div class="modal-title">業者紹介を追加</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">業者名 *</label><input class="fi" id="i_name"></div>
+    <div class="frow"><label class="flabel">種別</label>
+      <select class="fi" id="i_type"><option>ハウスメーカー</option><option>工務店</option><option>不動産業者</option><option>その他</option></select></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">紹介日</label><input class="fi" type="date" id="i_date"></div>
+    <div class="frow"><label class="flabel">ステータス</label>
+      <select class="fi" id="i_status"><option>紹介済み</option><option>検討中</option><option>条件提示</option><option>採用</option><option>見送り</option></select></div>
+  </div>
+  <div class="frow"><label class="flabel">メモ</label><textarea class="fi" id="i_memo"></textarea></div>
+  <div class="modal-actions">
+    <button class="btn" onclick="closeModal('introModal')">キャンセル</button>
+    <button class="btn btn-green" onclick="saveIntro()">保存する</button>
+  </div>
+</div></div>
+
+<!-- BUY: PERMIT EDIT -->
+<div class="overlay" id="permitModal" style="display:none">
+<div class="modal" style="max-width:460px">
+  <div class="modal-title" id="permitModalTitle">許可情報を編集</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">ステータス</label>
+      <select class="fi" id="p_status">
+        <option>不要</option><option>未申請</option><option>申請準備中</option>
+        <option>申請済み</option><option>許可済み</option><option>不許可</option>
+      </select></div>
+    <div class="frow"><label class="flabel">申請日</label><input class="fi" type="date" id="p_app_date"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">許可（見込）日</label><input class="fi" type="date" id="p_permit_date"></div>
+    <div class="frow"><label class="flabel">担当窓口</label><input class="fi" id="p_office"></div>
+  </div>
+  <div class="frow"><label class="flabel">備考</label><textarea class="fi" id="p_note" style="min-height:60px"></textarea></div>
+  <div class="modal-actions">
+    <button class="btn" onclick="closeModal('permitModal')">キャンセル</button>
+    <button class="btn btn-green" onclick="savePermit()">保存</button>
+  </div>
+</div></div>
+
+<!-- PHOTO CAPTION -->
+<div class="overlay" id="photoCapModal" style="display:none">
+<div class="modal" style="max-width:400px">
+  <div class="modal-title">ファイル情報</div>
+  <div style="font-size:13px;color:var(--text3);margin-bottom:14px" id="photoFileName"></div>
+  <div class="frow"><label class="flabel">カテゴリ</label>
+    <select class="fi" id="ph_cat">
+      <option>現地写真</option><option>測量図</option><option>公図</option><option>登記簿</option>
+      <option>区画割図</option><option>見積書</option><option>その他書類</option>
+    </select></div>
+  <div class="frow"><label class="flabel">説明（任意）</label><input class="fi" id="ph_cap" placeholder="例: 南側からの全景"></div>
+  <div class="modal-actions">
+    <button class="btn" onclick="skipPhoto()">スキップ</button>
+    <button class="btn btn-blue" onclick="confirmPhoto()">追加する</button>
+  </div>
+</div></div>
+
+
+<!-- DETAIL MODAL -->
+<div class="overlay" id="detailModal" style="display:none">
+<div class="modal" style="max-width:680px">
+  <div class="modal-title">物件詳細を編集</div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="msub" style="margin-bottom:0">▍ 土地（複数筆対応）</div>
+    <button class="land-add-btn" style="width:auto;padding:5px 12px" onclick="addLandParcel('dt')">＋ 筆を追加</button>
+  </div>
+  <div id="dt-parcels-wrap"></div>
+  <div id="dt-land-total" style="display:none" class="land-total-row">
+    <div class="land-total-item">地積合計（登記）: <strong id="dt-total-reg">—</strong></div>
+    <div class="land-total-item">実測合計: <strong id="dt-total-actual">—</strong></div>
+  </div>
+
+  <div class="mdiv"></div>
+  <div class="msub" style="margin-bottom:8px">▍ 建物（建物がある場合）</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">主体構造</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="dt_bld_struct_main" onchange="comboChange('dt_bld_struct_main','dt_bld_struct_main_custom')">
+        <option value="">—</option>
+        <option>木造</option>
+        <option>軽量鉄骨造</option>
+        <option>重量鉄骨造</option>
+        <option>鉄筋コンクリート造</option>
+        <option>鉄骨鉄筋コンクリート造</option>
+        <option>ブロック造</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="dt_bld_struct_main_custom" placeholder="例: 組積造など">
+    </div>
+    </div>
+    <div class="frow"><label class="flabel">屋根材</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="dt_bld_roof" onchange="comboChange('dt_bld_roof','dt_bld_roof_custom')">
+        <option value="">—</option>
+        <option>スレート（コロニアル）</option>
+        <option>ガルバリウム鋼板</option>
+        <option>瓦（陶器瓦）</option>
+        <option>瓦（セメント瓦）</option>
+        <option>アスファルトシングル</option>
+        <option>金属板</option>
+        <option>折板屋根</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="dt_bld_roof_custom" placeholder="例: 銅板葺きなど">
+    </div>
+    </div>
+    <div class="frow"><label class="flabel">階数</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="dt_bld_floors" onchange="comboChange('dt_bld_floors','dt_bld_floors_custom')">
+        <option value="">—</option>
+        <option>平屋（1階）</option>
+        <option>2階建</option>
+        <option>3階建</option>
+        <option>4階建以上</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="dt_bld_floors_custom" placeholder="例: 地下1階地上3階など">
+    </div>
+    </div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">築年月</label>
+      <input class="fi" id="dt_bld_built" placeholder="例: 2003年3月" oninput="updateBldAgeDisp('dt_bld_built','dt_bld_age_disp')">
+      <span style="font-size:11px;color:var(--text3);margin-top:3px;display:block">＝ <span id="dt_bld_age_disp" style="font-weight:600;color:var(--text2)">—</span></span>
+    </div>
+    <div class="frow"><label class="flabel">間取り</label><input class="fi" id="dt_bld_layout" placeholder="例: 4LDK"></div>
+  </div>
+  <div style="background:var(--surface2);border-radius:var(--rs);padding:12px 14px;margin-bottom:13px">
+    <div class="msub" style="margin-bottom:10px">床面積（㎡）</div>
+    <div class="f3">
+      <div class="frow"><label class="flabel">1階</label><input class="fi" id="dt_bld_area_1f" placeholder="例: 67.23" oninput="calcBldTotal('dt')"></div>
+      <div class="frow"><label class="flabel">2階</label><input class="fi" id="dt_bld_area_2f" placeholder="例: 55.80" oninput="calcBldTotal('dt')"></div>
+      <div class="frow"><label class="flabel">3階以上</label><input class="fi" id="dt_bld_area_3f" placeholder="例: 0" oninput="calcBldTotal('dt')"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--text3);font-weight:700">合計（登記）</span>
+      <input class="fi" id="dt_bld_area_reg" placeholder="自動計算" style="max-width:120px;font-weight:700;background:var(--green-l)" readonly>
+      <span style="font-size:12px;color:var(--text3)">㎡</span>
+    </div>
+  </div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">持分（建物）</label><input class="fi" id="dt_bld_share" placeholder="例: 全部 / 1/2"></div>
+    <div class="frow"><label class="flabel">所有者（建物）</label><input class="fi" id="dt_reg_owner_bld" placeholder="登記上の所有者"></div>
+    <div class="frow"><label class="flabel">建物の表示（地番）</label><input class="fi" id="dt_bld_chiban" placeholder="例: 289番地1"></div>
+  </div>
+
+  <div class="mdiv"></div>
+  <div class="msub" style="margin-bottom:8px">▍ 法令制限</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">用途地域</label><input class="fi" id="dt_zone" placeholder="例: 第一種低層住居専用"></div>
+    <div class="frow"><label class="flabel">建ぺい率</label><input class="fi" id="dt_kenpeir" placeholder="例: 60%"></div>
+    <div class="frow"><label class="flabel">容積率</label><input class="fi" id="dt_yosekir" placeholder="例: 200%"></div>
+  </div>
+  <div class="frow">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <label class="flabel" style="margin:0">その他制限</label>
+    </div>
+    <div id="dt-restrict-wrap"></div>
+    <button class="restrict-add-btn" onclick="addRestrictRow('dt')">＋ 制限を追加</button>
+  </div>
+
+  <div class="mdiv"></div>
+<div class="msub">▍ 接道・前面道路</div>
+  <div id="dt-roads-wrap"></div>
+  <button class="road-add-btn" onclick="addRoadRow('dt')" id="dt-road-add-btn">＋ 道路を追加</button>
+
+
+  <div class="mdiv"></div>
+  <div class="msub" style="margin-bottom:8px">▍ 登記情報</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">所有者（土地）</label><input class="fi" id="dt_reg_owner" placeholder="登記上の所有者"></div>
+    <div class="frow"><label class="flabel">抵当権・その他権利</label><input class="fi" id="dt_reg_mortgage" placeholder="例: ○○銀行 抵当権設定あり"></div>
+  </div>
+
+  <div class="mdiv"></div>
+  <div class="msub" style="margin-bottom:8px">▍ 設備・インフラ</div>
+  <div class="f2">
+        <div class="frow"><label class="flabel">上水道</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="dt_inf_water" onchange="comboChange('dt_inf_water','dt_inf_water_custom')">
+        <option value="">—</option>
+        <option>公営水道（引込済）</option>
+        <option>公営水道（引込なし）</option>
+        <option>井戸</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="dt_inf_water_custom" placeholder="上水道について直接入力">
+    </div>
+    </div>
+        <div class="frow"><label class="flabel">下水道</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="dt_inf_sewer" onchange="comboChange('dt_inf_sewer','dt_inf_sewer_custom')">
+        <option value="">—</option>
+        <option>公共下水（接続済）</option>
+        <option>公共下水（接続なし）</option>
+        <option>浄化槽</option>
+        <option>汲み取り</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="dt_inf_sewer_custom" placeholder="下水道について直接入力">
+    </div>
+    </div>
+  </div>
+  <div class="f2">
+        <div class="frow"><label class="flabel">ガス</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="dt_inf_gas" onchange="comboChange('dt_inf_gas','dt_inf_gas_custom')">
+        <option value="">—</option>
+        <option>都市ガス（引込済）</option>
+        <option>都市ガス（引込なし）</option>
+        <option>プロパンガス</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="dt_inf_gas_custom" placeholder="ガスについて直接入力">
+    </div>
+    </div>
+        <div class="frow"><label class="flabel">電気</label>
+      <div class="combo-wrap">
+      <select class="fi combo-sel" id="dt_inf_elec" onchange="comboChange('dt_inf_elec','dt_inf_elec_custom')">
+        <option value="">—</option>
+        <option>東京電力（引込済）</option>
+        <option>東京電力（引込なし）</option>
+        <option>引込なし</option>
+        <option>なし</option>
+        <option value="__other__">その他（直接入力）</option>
+      </select>
+      <input class="fi combo-input" id="dt_inf_elec_custom" placeholder="電気について直接入力">
+    </div>
+    </div>
+  </div>
+
+  <div class="modal-actions">
+    <button class="btn" onclick="closeModal('detailModal')">キャンセル</button>
+    <button class="btn btn-blue" onclick="saveDetail()">保存</button>
+  </div>
+</div>
+</div>
+
+
+<!-- ESTIMATE MODAL -->
+<div class="overlay" id="estimateModal" style="display:none">
+<div class="modal" style="max-width:520px">
+  <div class="modal-title" id="estModalTitle">見積もりを追加</div>
+  <div class="frow"><label class="flabel">工事・申請の種別 *</label>
+    <select class="fi" id="est_category">
+      <option value="">—</option>
+      <option>造成工事</option><option>解体工事</option><option>土留め工事</option>
+      <option>擁壁工事</option><option>舗装工事</option><option>給排水工事</option>
+      <option>外構工事</option><option>農地転用申請費用</option><option>開発許可申請費用</option>
+      <option>測量・境界確定費用</option><option>設計・監理費用</option><option>その他</option>
+    </select>
+  </div>
+  <div class="frow"><label class="flabel">業者名</label><input class="fi" id="est_vendor" placeholder="例: ○○建設"></div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">見積金額（万円）</label><input class="fi" id="est_amount" placeholder="例: 350" type="number" min="0"></div>
+    <div class="frow"><label class="flabel">見積日</label><input class="fi" type="date" id="est_date"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">ステータス</label>
+      <select class="fi" id="est_status">
+        <option>見積取得済み</option><option>発注済み</option><option>工事中</option>
+        <option>完了</option><option>見送り</option>
+      </select>
+    </div>
+    <div class="frow"><label class="flabel">採用区分</label>
+      <select class="fi" id="est_adopted">
+        <option value="">未定</option><option>採用</option><option>比較中</option><option>不採用</option>
+      </select>
+    </div>
+  </div>
+  <div class="frow"><label class="flabel">備考</label><textarea class="fi" id="est_note" style="min-height:60px" placeholder="工事内容の詳細、条件など"></textarea></div>
+  <div class="modal-actions">
+    <button class="btn btn-danger" id="estDeleteBtn" onclick="deleteEstimate()" style="display:none">削除</button>
+    <div style="flex:1"></div>
+    <button class="btn" onclick="closeModal('estimateModal')">キャンセル</button>
+    <button class="btn btn-green" id="estSaveBtn" onclick="saveEstimate()">保存する</button>
+  </div>
+</div>
+</div>
+
+<!-- PLAN PHOTO CAPTION -->
+<div class="overlay" id="planCapModal" style="display:none">
+<div class="modal" style="max-width:400px">
+  <div class="modal-title">図面情報</div>
+  <div style="font-size:13px;color:var(--text3);margin-bottom:12px" id="planFileName"></div>
+  <div class="frow"><label class="flabel">種別</label>
+    <select class="fi" id="plan_cat">
+      <option>区画割図</option><option>造成計画図</option><option>測量図</option>
+      <option>配置図</option><option>平面図</option><option>許可申請図</option><option>その他</option>
+    </select>
+  </div>
+  <div class="frow"><label class="flabel">説明（任意）</label><input class="fi" id="plan_cap" placeholder="例: 8区画案 第1案"></div>
+  <div class="modal-actions">
+    <button class="btn" onclick="skipPlanPhoto()">スキップ</button>
+    <button class="btn btn-blue" onclick="confirmPlanPhoto()">追加する</button>
+  </div>
+</div>
+</div>
+
+
+</div>
+
+
+<!-- CUSTOMER MODAL -->
+<div class="overlay" id="customerModal" style="display:none">
+<div class="modal" style="max-width:600px">
+  <div class="modal-title" id="custModalTitle">顧客対応を追加</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">対応日 *</label><input class="fi" type="date" id="cust_date"></div>
+    <div class="frow"><label class="flabel">対応種別</label>
+      <select class="fi" id="cust_type">
+        <option>問合せ（電話）</option><option>問合せ（メール）</option><option>問合せ（来店）</option>
+        <option>内見</option><option>再内見</option><option>価格交渉</option>
+        <option>申込み</option><option>その他</option>
+      </select>
+    </div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">顧客名</label><input class="fi" id="cust_name" placeholder="例: 鈴木 太郎 様"></div>
+    <div class="frow"><label class="flabel">連絡先</label><input class="fi" id="cust_tel" placeholder="例: 090-XXXX-XXXX"></div>
+  </div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">家族構成</label><input class="fi" id="cust_family" placeholder="例: 夫婦＋子2人"></div>
+    <div class="frow"><label class="flabel">希望予算</label><input class="fi" id="cust_budget" placeholder="例: 3,000万円以下"></div>
+    <div class="frow"><label class="flabel">資金計画</label><input class="fi" id="cust_finance" placeholder="例: 住宅ローン"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">ステータス</label>
+      <select class="fi" id="cust_status">
+        <option>対応中</option><option>検討中</option><option>再連絡待ち</option>
+        <option>申込済み</option><option>見送り</option><option>成約</option>
+      </select>
+    </div>
+    <div class="frow"><label class="flabel">次回アクション</label><input class="fi" id="cust_next" placeholder="例: 来週再内見の予定"></div>
+  </div>
+  <div class="frow"><label class="flabel">対応内容・メモ *</label>
+    <textarea class="fi" id="cust_note" style="min-height:120px" placeholder="問合せ内容、内見の感想、希望条件、懸念点など"></textarea>
+  </div>
+  <div class="modal-actions">
+    <button class="btn btn-danger" id="custDeleteBtn" onclick="deleteCustomer()" style="display:none">削除</button>
+    <div style="flex:1"></div>
+    <button class="btn" onclick="closeModal('customerModal')">キャンセル</button>
+    <button class="btn btn-blue" id="custSaveBtn" onclick="saveCustomer()">保存する</button>
+  </div>
+</div>
+</div>
+
+
+<!-- GDRIVE SETTINGS MODAL -->
+<div class="overlay" id="gdSettingsModal" style="display:none">
+<div class="modal" style="max-width:500px">
+  <div class="modal-title">Googleドライブ連携 設定</div>
+  <div style="background:var(--blue-l);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--blue-d)">
+    <strong>設定手順（初回のみ）</strong><br>
+    ① <a href="https://console.cloud.google.com/" target="_blank" style="color:var(--blue)">Google Cloud Console</a> でプロジェクトを作成<br>
+    ② 「APIとサービス」→「ライブラリ」→「Google Drive API」を有効化<br>
+    ③ 「認証情報」→「OAuth 2.0 クライアントID」を作成（種別: ウェブアプリ）<br>
+    ④ 「承認済みのJavaScriptオリジン」に <code style="background:var(--surface);padding:1px 4px;border-radius:3px">null</code> または使用するURLを追加<br>
+    ⑤ 作成されたクライアントIDを下に入力
+  </div>
+  <div class="frow"><label class="flabel">OAuth クライアントID *</label>
+    <input class="fi" id="gd_client_id" placeholder="XXXXXXXXX.apps.googleusercontent.com">
+  </div>
+  <div class="frow"><label class="flabel">保存ファイル名</label>
+    <input class="fi" id="gd_filename" placeholder="案件データ.json" value="案件データ.json">
+  </div>
+  <div style="font-size:12px;color:var(--text3);margin-top:4px">
+    ※ 設定はこのブラウザに保存されます。別のPCでも同じClient IDと同じGoogleアカウントでサインインしてください。
+  </div>
+  <div class="modal-actions">
+    <button class="btn" onclick="closeModal('gdSettingsModal')">キャンセル</button>
+    <button class="btn btn-blue" onclick="gdSaveSettings()">保存して接続</button>
+  </div>
+</div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" style="display:none" onclick="closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <img id="lbImg" src="" alt="">
+  <div class="lb-cap" id="lbCap"></div>
+</div>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const BUY_STAGES = ['情報入手','現地確認','査定中','売主交渉','契約準備','契約済み'];
+const BRK_STAGES = ['媒介契約','物件調査','広告・募集','内覧対応','条件交渉','契約締結','引渡完了'];
+const BUY_ACTIVE = ['情報入手','現地確認','査定中','売主交渉','契約準備'];
+const BRK_ACTIVE = ['媒介契約','物件調査','広告・募集','内覧対応','条件交渉','契約締結'];
+const BUY_DONE   = ['契約済み','完了'];
+const BRK_DONE   = ['引渡完了'];
+
+const PERMIT_TYPES = [
+  {key:'nouchi3', label:'農地法3条許可', sub:'農地の権利移転'},
+  {key:'nouchi5', label:'農地法5条許可', sub:'農地転用＋権利移転'},
+  {key:'kaihatsu',label:'開発許可',       sub:'都市計画法29条'},
+  {key:'morizumi',label:'盛土規制法',     sub:'盛土・造成工事'},
+  {key:'nousin',  label:'農振除外',       sub:'農業振興地域除外'},
+  {key:'kaoku',   label:'建築確認（予定）',sub:'建築基準法'},
+];
+
+const BUY_TABS = ['ov','detail','price','meetings','intro','permits','plan','photos','schedule','notes'];
+const BRK_TABS = ['ov','detail-brk','price','parties','customers','meetings','photos','schedule','notes'];
+
+// ============================================================
+// STATE
+// ============================================================
+let mode = 'buy';
+// ★ Google Apps Script のデプロイURLをここに貼り付けてください
+
+let buyCases = [];
+let brkCases = [];
+let curId    = null;
+let activeTab = 'ov';
+let filterMode = 'all';
+let editingMeetId   = null;
+let editingPermitKey = null;
+let editingBuyCaseId = null;  // 編集中のBUY案件ID（nullなら新規）
+let editingBrkCaseId = null;  // 編集中のBRK案件ID（nullなら新規）
+let _skipModalConfirm = false; // 保存時は確認スキップ
+let pendingFiles = [], pendingIdx = 0, pendingData = null;
+
+function getCases() { return mode==='buy' ? buyCases : brkCases; }
+function getCur()   { return getCases().find(c=>c.id===curId); }
+function getStages(){ return mode==='buy' ? BUY_STAGES : BRK_STAGES; }
+function getTabs()  { return mode==='buy' ? BUY_TABS : BRK_TABS; }
+function uid()  { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function fd(d)  { return d?d.replace(/-/g,'/'):''; }
+
+function save() {
+  // localStorage fallback (works when opened as file)
+  try { localStorage.setItem('buy_v1', JSON.stringify(buyCases)); } catch(e){}
+  try { localStorage.setItem('brk_v1', JSON.stringify(brkCases)); } catch(e){}
+  // window.storage (works in Claude.ai Artifact)
+  if (window.storage) {
+    window.storage.set('buy_v1', JSON.stringify(buyCases)).catch(()=>{});
+    window.storage.set('brk_v1', JSON.stringify(brkCases)).catch(()=>{});
+  }
+  // Google Drive 自動保存（接続中のみ）
+  if (typeof scheduleGdSave === 'function') scheduleGdSave();
+}
+
+// ============================================================
+// MODE
+// ============================================================
+function setMode(m) {
+  mode=m; curId=null; activeTab='ov'; filterMode='all';
+  document.getElementById('mb-buy').classList.toggle('active', m==='buy');
+  document.getElementById('mb-brk').classList.toggle('active', m==='brk');
+  const btn = document.getElementById('addBtn');
+  btn.className = 'add-btn '+(m==='buy'?'buy':'brk');
+  document.querySelectorAll('.fchip').forEach(c=>{
+    c.className='fchip '+(m==='buy'?'buy':'brk');
+    if(c.dataset.s==='all') c.classList.add('active');
+  });
+  renderSidebar(); renderMain();
+}
+
+// ============================================================
+// SIDEBAR
+// ============================================================
+function setFilter(el) {
+  document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  filterMode = el.dataset.s;
+  renderSidebar();
+}
+
+function renderSidebar() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const active = mode==='buy' ? BUY_ACTIVE : BRK_ACTIVE;
+  const done   = mode==='buy' ? BUY_DONE   : BRK_DONE;
+  let list = getCases().filter(c=>
+    c.name.toLowerCase().includes(q) || (c.addr||'').toLowerCase().includes(q)
+  );
+  if (filterMode==='active') list=list.filter(c=>active.includes(c.status));
+  else if (filterMode==='done') list=list.filter(c=>done.includes(c.status));
+  else if (filterMode==='ng') list=list.filter(c=>c.status==='見送り');
+  const el=document.getElementById('caseList');
+  if (!list.length) { el.innerHTML='<div style="padding:16px;color:var(--text3);font-size:13px">案件がありません</div>'; return; }
+  const modeClass = mode==='buy'?'buy':'brk';
+  el.innerHTML = list.map(c=>{
+    const price = mode==='buy' ? c.offer : c.sale_price;
+    return `<div class="pi ${c.id===curId?'active '+modeClass:''}"
+      data-id="${c.id}"
+      draggable="true"
+      onclick="selectCase('${c.id}')"
+      ondragstart="dragStart(event,'${c.id}')"
+      ondragover="dragOver(event)"
+      ondragleave="dragLeave(event)"
+      ondrop="dragDrop(event,'${c.id}')"
+      ondragend="dragEnd(event)">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="color:var(--text3);font-size:12px;cursor:grab;flex-shrink:0" title="ドラッグして並び替え">⠿</span>
+        <div style="min-width:0">
+          <div class="pi-name">${c.name}</div>
+          <div class="pi-sub">
+            <span class="sdot dot-${c.status||''}"></span>
+            <span>${c.status||''}</span>
+            ${c.area?`<span>・</span><span>${Number(c.area).toLocaleString()}㎡</span>`:''}
+            ${price?`<span>・</span><span>${price}</span>`:''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectCase(id) { if(isModalOpen()) return; curId=id; activeTab='ov'; renderSidebar(); renderMain(); }
+
+// ============================================================
+// MAIN RENDER
+// ============================================================
+function renderMain() {
+  const c = getCur();
+  if (!c) {
+    const icon = mode==='buy'?'🏗':'🏠';
+    document.getElementById('mainArea').innerHTML=`<div class="empty"><div style="font-size:36px">${icon}</div><div style="font-size:15px;font-weight:700;color:var(--text2)">案件を選択してください</div><div style="font-size:13px">左から選ぶか、新規登録してください</div></div>`;
+    return;
+  }
+  mode==='buy' ? renderBuyMain(c) : renderBrkMain(c);
+}
+
+function stageBar(stages, status, isBrk) {
+  const si = stages.indexOf(status); const idx = si>=0?si:0;
+  const bc = isBrk?'brk':'';
+  return stages.map((s,i)=>{
+    const cls = i<idx?`done ${bc}`: i===idx?'current':'';
+    return `<div class="snode ${cls}" onclick="quickStage('${s}')">
+      <div class="scirc">${i<idx?'✓':i+1}</div>
+      <div class="slabel">${s}</div>
+    </div>`;
+  }).join('');
+}
+
+function tabBar(tabs, labels) {
+  return tabs.map((t,i)=>`<div class="tab ${t===activeTab?'active':''}" onclick="switchTab('${t}')">${labels[i]}</div>`).join('');
+}
+
+// ============================================================
+// BUY MAIN
+// ============================================================
+function renderBuyMain(c) {
+  const meetings=c.meetings||[], intros=c.intros||[], photos=c.photos||[];
+  const permits=c.permits||{}, schedule=c.schedule||buyDefaultSchedule();
+  const pendingP = PERMIT_TYPES.filter(p=>{const s=(permits[p.key]||{}).status; return s&&s!=='不要'&&s!=='許可済み'&&s!=='未設定';}).length;
+  const estimates=c.estimates||[], planPhotos=c.planPhotos||[];
+  const labels=['概要','物件詳細','価格検討',`交渉記録(${meetings.length})`,`業者紹介(${intros.length})`,`許可管理${pendingP?` ⚠${pendingP}`:''}`,`造成・計画(${estimates.length+planPhotos.length})`,`写真・書類(${photos.length})`,'スケジュール','メモ'];
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="det-hdr">
+      <div>
+        <div class="det-title">${c.name}</div>
+        <div class="det-meta">
+          <span class="badge" style="background:var(--green-l);color:var(--green-d)">${c.status||''}</span>
+          ${c.addr?`<span style="font-size:12px;color:var(--text3)">📍 ${c.addr}</span>`:''}
+          ${c.area?`<span style="font-size:12px;font-weight:600;color:var(--text2)">${Number(c.area).toLocaleString()}㎡</span>`:''}
+          ${c.zone?`<span style="font-size:12px;color:var(--text3)">${c.zone}</span>`:''}
+          ${c.owner?`<span style="font-size:12px;color:var(--text3)">担当: ${c.owner}</span>`:''}
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="openEditModal()">編集</button>
+    </div>
+    <div class="prog-bar"><div class="stage-track">${stageBar(BUY_STAGES,c.status,false)}</div></div>
+    <div class="tabs">${tabBar(BUY_TABS,labels)}</div>
+
+    <div class="tc ${activeTab==='ov'?'active':''}" id="tc-ov">
+      <div class="sec"><div class="g4">
+        <div class="ic"><div class="ic-l">地積</div><div class="ic-v">${c.area?Number(c.area).toLocaleString()+'㎡':'—'}</div></div>
+        <div class="ic"><div class="ic-l">用途地域</div><div class="ic-v" style="font-size:13px">${c.zone||'—'}</div></div>
+        <div class="ic"><div class="ic-l">想定区画数</div><div class="ic-v">${c.lots||'—'}</div></div>
+        <div class="ic"><div class="ic-l">担当者</div><div class="ic-v" style="font-size:13px">${c.owner||'—'}</div></div>
+      </div></div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">売主情報</div></div>
+        <div class="g3">
+          <div class="ic"><div class="ic-l">売主氏名</div><div class="ic-v" style="font-size:13px">${c.seller||'—'}</div></div>
+          <div class="ic"><div class="ic-l">連絡先</div><div class="ic-v" style="font-size:13px">${c.seller_tel||'—'}</div></div>
+          <div class="ic"><div class="ic-l">希望価格</div><div class="ic-v" style="color:var(--red)">${c.ask_price||'—'}</div></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">価格サマリー</div></div>
+        <div class="g3">
+          <div class="ic"><div class="ic-l">査定価格</div><div class="ic-v">${c.appraisal||'—'}</div></div>
+          <div class="ic" style="border-color:var(--green);background:var(--green-l)"><div class="ic-l" style="color:var(--green)">買取提示価格</div><div class="ic-v" style="color:var(--green)">${c.offer||'—'}</div></div>
+          <div class="ic"><div class="ic-l">成約価格</div><div class="ic-v" style="color:var(--teal)">${c.deal||'—'}</div></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">許可状況</div><button class="btn btn-sm" onclick="switchTab('permits')">詳細 →</button></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${PERMIT_TYPES.map(p=>{const st=(permits[p.key]||{}).status||'未設定'; return `<span class="ps ps-${st}">${p.label}: ${st}</span>`;}).join('')}
+        </div>
+      </div>
+      ${c.memo?`<div class="sec"><div class="sec-hdr"><div class="sec-title">特記事項</div></div><div class="notes-wrap"><div style="font-size:13px;color:var(--text2);white-space:pre-wrap">${c.memo}</div></div></div>`:''}
+      ${meetings.length?`<div class="sec"><div class="sec-hdr"><div class="sec-title">直近の記録</div><button class="btn btn-sm" onclick="switchTab('meetings')">すべて →</button></div>${renderMeetCard(meetings[meetings.length-1])}</div>`:''}
+    </div>
+
+    <div class="tc ${activeTab==='detail'?'active':''}" id="tc-detail">
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">土地</div><button class="btn btn-sm" onclick="openDetailModal()">編集</button></div>
+        ${renderLandParcelsView(c.parcels||[{chiban:c.land_chiban,chimoku:c.land_chimoku,area_reg:c.land_area_reg,area_actual:c.land_area_actual,share:c.land_share}])}
+      </div>
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">法令制限</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">用途地域</span><span class="pt-v">${c.zone||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">建ぺい率</span><span class="pt-v">${c.kenpeir||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">容積率</span><span class="pt-v">${c.yosekir||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">その他制限</span><span class="pt-v" style="font-size:12px;white-space:pre-wrap">${c.land_restrict||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">接道・前面道路</div></div>
+        <div class="pt">
+          ${(c.roads||[]).length?c.roads.map((r,i)=>`
+            <div class="pt-row"><span class="pt-l">${i===0?'前面道路':'道路'+(i+1)}</span><span class="pt-v" style="font-size:13px">${[r.contact,r.width,r.type].filter(Boolean).join('　')}</span></div>
+          `).join(''):'<div class="pt-row"><span class="pt-l">前面道路</span><span class="pt-v">—</span></div>'}
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">登記情報</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">所有者</span><span class="pt-v">${c.reg_owner||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">抵当権等</span><span class="pt-v" style="font-size:12px;white-space:pre-wrap">${c.reg_mortgage||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">設備・インフラ</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">上水道</span><span class="pt-v">${c.inf_water||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">下水道</span><span class="pt-v">${c.inf_sewer||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">ガス</span><span class="pt-v">${c.inf_gas||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">電気</span><span class="pt-v">${c.inf_elec||'—'}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='price'?'active':''}" id="tc-price">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">価格検討</div><button class="btn btn-sm" onclick="openEditModal()">編集</button></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">売主希望価格</span><span class="pt-v" style="color:var(--red)">${c.ask_price||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">査定価格</span><span class="pt-v">${c.appraisal||'—'}</span></div>
+          <div class="pt-row hl"><span class="pt-l">買取提示価格</span><span class="pt-v">${c.offer||'—'}</span>${c.area&&c.offer?`<span class="pt-n">${perSqm(c.area,c.offer)}</span>`:''}</div>
+          <div class="pt-row"><span class="pt-l">成約価格</span><span class="pt-v" style="color:var(--teal)">${c.deal||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">分譲計画</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">想定区画数</span><span class="pt-v">${c.lots||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">販売単価（想定）</span><span class="pt-v">${c.lot_price||'—'}</span></div>
+          <div class="pt-row hl"><span class="pt-l">想定売上合計</span><span class="pt-v">${c.gross||calcGross(c)||'—'}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='meetings'?'active':''}" id="tc-meetings">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">交渉・打合せ記録</div><button class="btn btn-green btn-sm" onclick="openAddMeet()">＋ 追加</button></div>
+        <div class="meeting-list" id="meetList">${renderMeetings(meetings)}</div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='intro'?'active':''}" id="tc-intro">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">業者・HM紹介状況</div><button class="btn btn-green btn-sm" onclick="openAddIntro()">＋ 追加</button></div>
+        ${renderIntros(intros)}
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='permits'?'active':''}" id="tc-permits">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">許可・届出管理</div></div>
+        <div class="permit-grid">
+          ${PERMIT_TYPES.map(p=>{
+            const pm=permits[p.key]||{}, st=pm.status||'未設定';
+            return `<div class="permit-card">
+              <div class="pc-head">
+                <div><div class="pc-title">${p.label}</div><div style="font-size:11px;color:var(--text3)">${p.sub}</div></div>
+                <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+                  <span class="ps ps-${st}">${st}</span>
+                  <button class="btn btn-sm" onclick="openEditPermit('${p.key}','${p.label}')">編集</button>
+                </div>
+              </div>
+              <div class="pc-body">
+                ${pm.app_date?`<div class="pc-row"><span class="pc-l">申請日</span><span class="pc-v">${fd(pm.app_date)}</span></div>`:''}
+                ${pm.permit_date?`<div class="pc-row"><span class="pc-l">許可（見込）日</span><span class="pc-v">${fd(pm.permit_date)}</span></div>`:''}
+                ${pm.office?`<div class="pc-row"><span class="pc-l">担当窓口</span><span class="pc-v">${pm.office}</span></div>`:''}
+                ${pm.note?`<div class="pc-row"><span class="pc-l">備考</span><span class="pc-v" style="color:var(--text2);white-space:pre-wrap">${pm.note}</span></div>`:''}
+                ${!pm.status?`<div style="font-size:12px;color:var(--text3)">未入力</div>`:''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+
+    <div class="tc ${activeTab==='plan'?'active':''}" id="tc-plan">
+      <!-- 見積もり -->
+      <div class="sec">
+        <div class="sec-hdr">
+          <div class="sec-title">造成・許認可 見積もり</div>
+          <button class="btn btn-green btn-sm" onclick="openAddEstimate()">＋ 追加</button>
+        </div>
+        <div id="estimateList">${renderEstimates(estimates)}</div>
+        ${estimates.length>1?`<div class="pt" style="margin-top:10px"><div class="pt-row hl"><span class="pt-l" style="font-weight:700">合計金額</span><span class="pt-v">${calcEstimateTotal(estimates)}</span></div></div>`:''}
+      </div>
+      <!-- 計画図面・区画図 -->
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">計画図面・区画図</div></div>
+        <div class="drop-zone" id="planDropZone"
+          onclick="document.getElementById('planPhotoInput').click()"
+          ondragover="dOver2(event)" ondragleave="dLeave2()" ondrop="dDrop2(event)">
+          <input type="file" id="planPhotoInput" accept="image/*,application/pdf" multiple onchange="planFileSelect(event)">
+          <div style="font-size:22px;margin-bottom:5px">📐</div>
+          <div style="font-size:13px;color:var(--text3)"><strong style="color:var(--blue)">クリックして選択</strong>、またはドラッグ＆ドロップ</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">区画図・造成計画図・測量図など ／ PDF・JPG・PNG 対応</div>
+        </div>
+        <div id="planPhotoGrid" class="photo-grid">${renderPlanPhotos(planPhotos)}</div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='photos'?'active':''}" id="tc-photos">
+      ${photoTabHTML(photos)}
+    </div>
+
+    <div class="tc ${activeTab==='schedule'?'active':''}" id="tc-schedule">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">スケジュール</div></div>
+        <div style="display:flex;gap:12px;margin-bottom:12px">
+          <div class="ic" style="flex:1"><div class="ic-l">契約予定日</div><div class="ic-v" style="font-size:14px">${c.contract_date?fd(c.contract_date):'—'}</div></div>
+          <div class="ic" style="flex:1"><div class="ic-l">引渡・決済予定日</div><div class="ic-v" style="font-size:14px">${c.settlement_date?fd(c.settlement_date):'—'}</div></div>
+        </div>
+        <div class="sch-list" id="schList">${renderSchedule(schedule)}</div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='notes'?'active':''}" id="tc-notes">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">フリーメモ</div><button class="btn btn-sm" onclick="saveNotes()">保存</button></div>
+        <div class="notes-wrap"><textarea id="notesTA">${c.notes||''}</textarea></div>
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// BRK MAIN
+// ============================================================
+function renderBrkMain(c) {
+  const meetings=c.meetings||[], photos=c.photos||[];
+  const schedule=c.schedule||brkDefaultSchedule();
+  const customers=c.customers||[];
+  const labels=['概要','物件詳細','価格・手数料','当事者情報',`顧客対応(${customers.length})`,`交渉記録(${meetings.length})`,`写真・書類(${photos.length})`,'スケジュール','メモ'];
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="det-hdr">
+      <div>
+        <div class="det-title">${c.name}</div>
+        <div class="det-meta">
+          <span class="badge" style="background:var(--blue-l);color:var(--blue-d)">${c.status||''}</span>
+          <span class="badge" style="background:var(--surface2);color:var(--text2);font-size:10px">${c.mediation||''}</span>
+          ${c.addr?`<span style="font-size:12px;color:var(--text3)">📍 ${c.addr}</span>`:''}
+          ${c.sale_price?`<span style="font-size:13px;font-weight:700;color:var(--text)">${c.sale_price}</span>`:''}
+          ${c.owner?`<span style="font-size:12px;color:var(--text3)">担当: ${c.owner}</span>`:''}
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="openEditModal()">編集</button>
+    </div>
+    <div class="prog-bar"><div class="stage-track">${stageBar(BRK_STAGES,c.status,true)}</div></div>
+    <div class="tabs">${tabBar(BRK_TABS,labels)}</div>
+
+    <div class="tc ${activeTab==='ov'?'active':''}" id="tc-ov">
+      <div class="sec"><div class="g4">
+        <div class="ic"><div class="ic-l">物件種別</div><div class="ic-v" style="font-size:13px">${c.prop_type||'—'}</div></div>
+        <div class="ic"><div class="ic-l">面積</div><div class="ic-v">${c.area?Number(c.area).toLocaleString()+'㎡':'—'}</div></div>
+        <div class="ic"><div class="ic-l">媒介種別</div><div class="ic-v" style="font-size:13px">${c.mediation||'—'}</div></div>
+        <div class="ic"><div class="ic-l">担当者</div><div class="ic-v" style="font-size:13px">${c.owner||'—'}</div></div>
+      </div></div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">売主情報</div></div>
+        <div class="g3">
+          <div class="ic"><div class="ic-l">売主氏名</div><div class="ic-v" style="font-size:13px">${c.seller||'—'}</div></div>
+          <div class="ic"><div class="ic-l">連絡先</div><div class="ic-v" style="font-size:13px">${c.seller_tel||'—'}</div></div>
+          <div class="ic"><div class="ic-l">希望価格</div><div class="ic-v" style="color:var(--red)">${c.ask_price||'—'}</div></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">価格サマリー</div></div>
+        <div class="g3">
+          <div class="ic"><div class="ic-l">査定価格</div><div class="ic-v">${c.appraisal||'—'}</div></div>
+          <div class="ic" style="border-color:var(--blue);background:var(--blue-l)"><div class="ic-l" style="color:var(--blue)">売出価格</div><div class="ic-v" style="color:var(--blue)">${c.sale_price||'—'}</div></div>
+          <div class="ic"><div class="ic-l">成約価格</div><div class="ic-v" style="color:var(--teal)">${c.deal_price||'—'}</div></div>
+        </div>
+      </div>
+      ${c.memo?`<div class="sec"><div class="sec-hdr"><div class="sec-title">特記事項</div></div><div class="notes-wrap"><div style="font-size:13px;color:var(--text2);white-space:pre-wrap">${c.memo}</div></div></div>`:''}
+      ${meetings.length?`<div class="sec"><div class="sec-hdr"><div class="sec-title">直近の記録</div><button class="btn btn-sm" onclick="switchTab('meetings')">すべて →</button></div>${renderMeetCard(meetings[meetings.length-1])}</div>`:''}
+    </div>
+
+    <div class="tc ${activeTab==='detail-brk'?'active':''}" id="tc-detail-brk">
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">土地</div><button class="btn btn-sm" onclick="openDetailModal()">編集</button></div>
+        ${renderLandParcelsView(c.parcels||[{chiban:c.land_chiban,chimoku:c.land_chimoku,area_reg:c.land_area_reg,area_actual:c.land_area_actual,share:c.land_share}])}
+      </div>
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">建物</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">主体構造</span><span class="pt-v">${c.bld_struct_main||c.bld_structure||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">屋根材</span><span class="pt-v">${c.bld_roof||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">階数</span><span class="pt-v">${c.bld_floors||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">築年月</span><span class="pt-v">${c.bld_built||'—'}${c.bld_built?` <span style="color:var(--text3);font-size:12px">（${calcBuildAge(c.bld_built)||''}）</span>`:''}</span></div>
+          <div class="pt-row"><span class="pt-l">間取り</span><span class="pt-v">${c.bld_layout||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">床面積（1階）</span><span class="pt-v">${c.bld_area_1f?c.bld_area_1f+'㎡':'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">床面積（2階）</span><span class="pt-v">${c.bld_area_2f?c.bld_area_2f+'㎡':'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">床面積（3階以上）</span><span class="pt-v">${c.bld_area_3f?c.bld_area_3f+'㎡':'—'}</span></div>
+          <div class="pt-row hl-b"><span class="pt-l">床面積合計</span><span class="pt-v">${c.bld_area_reg?c.bld_area_reg+'㎡':'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">持分</span><span class="pt-v">${c.bld_share||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">法令制限</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">用途地域</span><span class="pt-v">${c.zone||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">建ぺい率</span><span class="pt-v">${c.kenpeir||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">容積率</span><span class="pt-v">${c.yosekir||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">その他制限</span><span class="pt-v" style="font-size:12px;white-space:pre-wrap">${c.land_restrict||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">接道・前面道路</div></div>
+        <div class="pt">
+          ${(c.roads||[]).length?c.roads.map((r,i)=>`
+            <div class="pt-row"><span class="pt-l">${i===0?'前面道路':'道路'+(i+1)}</span><span class="pt-v" style="font-size:13px">${[r.contact,r.width,r.type].filter(Boolean).join('　')}</span></div>
+          `).join(''):'<div class="pt-row"><span class="pt-l">前面道路</span><span class="pt-v">—</span></div>'}
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">登記情報</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">所有者（土地）</span><span class="pt-v">${c.reg_owner||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">所有者（建物）</span><span class="pt-v">${c.reg_owner_bld||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">抵当権等</span><span class="pt-v" style="font-size:12px;white-space:pre-wrap">${c.reg_mortgage||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr"><div class="sec-title">設備・インフラ</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">上水道</span><span class="pt-v">${c.inf_water||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">下水道</span><span class="pt-v">${c.inf_sewer||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">ガス</span><span class="pt-v">${c.inf_gas||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">電気</span><span class="pt-v">${c.inf_elec||'—'}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='price'?'active':''}" id="tc-price">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">価格</div><button class="btn btn-sm" onclick="openEditModal()">編集</button></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">売主希望価格</span><span class="pt-v" style="color:var(--red)">${c.ask_price||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">査定価格</span><span class="pt-v">${c.appraisal||'—'}</span></div>
+          <div class="pt-row hl-b"><span class="pt-l">売出価格</span><span class="pt-v">${c.sale_price||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">成約価格</span><span class="pt-v" style="color:var(--teal)">${c.deal_price||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">仲介手数料（概算・上限）</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">売主側</span><span class="pt-v">${calcComm(c.deal_price||c.sale_price)}</span></div>
+          <div class="pt-row"><span class="pt-l">買主側</span><span class="pt-v">${calcComm(c.deal_price||c.sale_price)}</span></div>
+          <div class="pt-row hl-b"><span class="pt-l">合計（両手）</span><span class="pt-v">${calcComm(c.deal_price||c.sale_price,true)}</span></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px">※ 売買代金×3%＋6万円＋消費税（400万円超）の上限額</div>
+      </div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">媒介契約</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">媒介種別</span><span class="pt-v">${c.mediation||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">契約期間</span><span class="pt-v">${c.med_start?fd(c.med_start)+'〜':''} ${c.med_end?fd(c.med_end):'—'}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='parties'?'active':''}" id="tc-parties">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">売主情報</div><button class="btn btn-sm" onclick="openEditModal()">編集</button></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">氏名</span><span class="pt-v" style="font-size:14px">${c.seller||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">連絡先</span><span class="pt-v">${c.seller_tel||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">住所</span><span class="pt-v" style="font-size:13px">${c.seller_addr||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">買主情報</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">氏名</span><span class="pt-v" style="font-size:14px">${c.buyer||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">連絡先</span><span class="pt-v">${c.buyer_tel||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">資金計画</span><span class="pt-v" style="font-size:13px">${c.buyer_finance||'—'}</span></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">相手方業者</div></div>
+        <div class="pt">
+          <div class="pt-row"><span class="pt-l">会社名</span><span class="pt-v" style="font-size:13px">${c.other_agency||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">担当者</span><span class="pt-v">${c.other_agent||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">連絡先</span><span class="pt-v">${c.other_tel||'—'}</span></div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="tc ${activeTab==='customers'?'active':''}" id="tc-customers">
+      <div class="sec">
+        <div class="sec-hdr">
+          <div class="sec-title">顧客対応リスト</div>
+          <button class="btn btn-blue btn-sm" onclick="openAddCustomer()">＋ 追加</button>
+        </div>
+        <div id="customerList">${renderCustomers(customers)}</div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='meetings'?'active':''}" id="tc-meetings">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">交渉・打合せ記録</div><button class="btn btn-blue btn-sm" onclick="openAddMeet()">＋ 追加</button></div>
+        <div class="meeting-list" id="meetList">${renderMeetings(meetings)}</div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='photos'?'active':''}" id="tc-photos">
+      ${photoTabHTML(photos)}
+    </div>
+
+    <div class="tc ${activeTab==='schedule'?'active':''}" id="tc-schedule">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">スケジュール</div></div>
+        <div style="display:flex;gap:12px;margin-bottom:12px">
+          <div class="ic" style="flex:1"><div class="ic-l">契約予定日</div><div class="ic-v" style="font-size:14px">${c.contract_date?fd(c.contract_date):'—'}</div></div>
+          <div class="ic" style="flex:1"><div class="ic-l">引渡・決済予定日</div><div class="ic-v" style="font-size:14px">${c.settlement_date?fd(c.settlement_date):'—'}</div></div>
+        </div>
+        <div class="sch-list" id="schList">${renderSchedule(schedule)}</div>
+      </div>
+    </div>
+
+    <div class="tc ${activeTab==='notes'?'active':''}" id="tc-notes">
+      <div class="sec"><div class="sec-hdr"><div class="sec-title">フリーメモ</div><button class="btn btn-sm" onclick="saveNotes()">保存</button></div>
+        <div class="notes-wrap"><textarea id="notesTA">${c.notes||''}</textarea></div>
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function perSqm(area,price) {
+  const n=parseInt((price||'').replace(/[^0-9]/g,''));
+  if(!n||!area) return '';
+  return `約 ${Math.round(n*10000/Number(area)).toLocaleString()}円/㎡`;
+}
+function calcGross(c) {
+  if(!c.lots||!c.lot_price) return '';
+  const lots=parseInt(c.lots); const m=(c.lot_price||'').match(/[\d,]+/);
+  if(!lots||!m) return '';
+  return Math.round(lots*parseInt(m[0].replace(/,/g,''))).toLocaleString()+'万円';
+}
+function calcComm(priceStr, both=false) {
+  if(!priceStr) return '—';
+  const n=parseInt((priceStr||'').replace(/[^0-9]/g,''));
+  if(!n||n*10000<=4000000) return '—';
+  const base=n*10000*0.03+60000;
+  const tax=Math.floor(base*1.1);
+  const total=both?tax*2:tax;
+  return Math.floor(total/10000).toLocaleString()+'万円';
+}
+function renderMeetCard(m) {
+  if(!m) return '';
+  return `<div class="mcard">
+    <div class="mc-hdr"><div class="mc-title">${m.title||m.type}</div><div class="mc-date">${m.date}</div></div>
+    ${m.members?`<div class="mc-meta">👤 ${m.members}</div>`:''}
+    <div class="mc-body">${m.body||''}</div>
+    ${m.next?`<div class="mc-next">→ 次回: ${m.next}</div>`:''}
+    <div class="mc-tags"><span class="tag" style="background:var(--green-l);color:var(--green-d)">${m.type}</span></div>
+  </div>`;
+}
+function renderMeetings(meetings) {
+  if(!meetings.length) return '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">まだ記録がありません</div>';
+  const tagBg = mode==='buy'?'var(--green-l)':'var(--blue-l)';
+  const tagCol = mode==='buy'?'var(--green-d)':'var(--blue-d)';
+  return meetings.slice().reverse().map(m=>`
+    <div class="mcard">
+      <div class="mc-hdr">
+        <div class="mc-title">${m.title||m.type}</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="mc-date">${m.date}</span>
+          <button class="btn btn-sm" style="padding:3px 8px;font-size:11px" onclick="openEditMeet('${m.id}')">編集</button>
+          <button class="del-btn" onclick="deleteMeeting('${m.id}')">✕</button>
+        </div>
+      </div>
+      ${m.members?`<div class="mc-meta">👤 ${m.members}</div>`:''}
+      <div class="mc-body">${m.body||''}</div>
+      ${m.next?`<div class="mc-next">→ 次回: ${m.next}</div>`:''}
+      <div class="mc-tags"><span class="tag" style="background:${tagBg};color:${tagCol}">${m.type}</span></div>
+    </div>`).join('');
+}
+function renderIntros(intros) {
+  if(!intros.length) return '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">まだ登録がありません</div>';
+  const sc={'紹介済み':'var(--blue-l)|var(--blue-d)','検討中':'var(--amber-l)|var(--amber-d)','条件提示':'var(--teal-l)|var(--teal-d)','採用':'var(--green-l)|var(--green-d)','見送り':'var(--red-l)|var(--red-d)'};
+  return `<table class="it"><thead><tr><th>業者名</th><th>種別</th><th>紹介日</th><th>ステータス</th><th>メモ</th><th></th></tr></thead><tbody>
+  ${intros.map(i=>{const [bg,col]=(sc[i.status]||'var(--gray-l)|var(--text2)').split('|');
+    return `<tr><td style="font-weight:700">${i.name}</td><td>${i.type}</td><td style="color:var(--text3)">${fd(i.date)}</td><td><span class="badge" style="background:${bg};color:${col}">${i.status}</span></td><td style="font-size:12px;color:var(--text2)">${i.memo||''}</td><td><button class="del-btn" onclick="deleteIntro('${i.id}')">✕</button></td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+function photoTabHTML(photos) {
+  return `<div class="sec"><div class="sec-hdr"><div class="sec-title">写真・書類ファイル</div></div>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('photoInput').click()" ondragover="dOver(event)" ondragleave="dLeave()" ondrop="dDrop(event)">
+      <input type="file" id="photoInput" accept="image/*,application/pdf" multiple onchange="fileSelect(event)">
+      <div style="font-size:28px;margin-bottom:6px">📁</div>
+      <div style="font-size:13px;color:var(--text3)"><strong style="color:var(--blue)">クリックして選択</strong>、またはドラッグ＆ドロップ</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">JPG・PNG・PDF 対応</div>
+    </div>
+    <div id="photoGrid" class="photo-grid">${renderPhotos(photos)}</div>
+  </div>`;
+}
+function renderPhotos(photos) {
+  if(!photos.length) return '<div style="text-align:center;color:var(--text3);font-size:13px;padding:8px 0">ファイルがありません</div>';
+  return photos.map(p=>{
+    const isImg=p.dataUrl&&p.dataUrl.startsWith('data:image');
+    return `<div class="photo-item">
+      ${isImg?`<img src="${p.dataUrl}" onclick="openLB('${p.id}')" loading="lazy">`:`<div class="photo-pdf" onclick="dlFile('${p.id}')"><span>📄</span><div>${p.name}</div></div>`}
+      <div class="photo-cat">${p.category||''}</div>
+      <div class="photo-ov"><div class="photo-info"><div class="photo-name">${p.caption||p.name}</div></div></div>
+      <button class="photo-del" onclick="deletePhoto('${p.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+function renderSchedule(sch) {
+  return sch.map(s=>`<div class="sch-row">
+    <div class="sch-chk ${s.done?'done':''}" onclick="toggleSch('${s.id}')">${s.done?'✓':''}</div>
+    <div class="sch-label ${s.done?'done':''}">${s.label}</div>
+    <div class="sch-date">${s.date?fd(s.date):''}</div>
+  </div>`).join('');
+}
+
+// ============================================================
+// SWITCH TAB / STAGE
+// ============================================================
+function switchTab(tab) {
+  activeTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  const tabs=getTabs(); const idx=tabs.indexOf(tab);
+  if(idx>=0) document.querySelectorAll('.tab')[idx].classList.add('active');
+  const el=document.getElementById('tc-'+tab);
+  if(el) el.classList.add('active');
+}
+function quickStage(s) {
+  const c=getCur(); if(!c) return;
+  c.status=s; save(); renderSidebar(); renderMain();
+}
+
+// ============================================================
+// DETAIL MODAL
+// ============================================================
+const DETAIL_FIELDS = [
+  /* parcels handled separately */
+  'bld_struct_main','bld_roof','bld_floors','bld_built','bld_layout','bld_area_1f','bld_area_2f','bld_area_3f','bld_area_reg','bld_share','reg_owner_bld','bld_chiban',
+  'zone','kenpeir','yosekir','land_restrict',
+  'roads',
+  'reg_owner','reg_mortgage',
+  'inf_water','inf_sewer','inf_gas','inf_elec'
+];
+function openDetailModal() {
+  const c=getCur(); if(!c) return;
+  DETAIL_FIELDS.forEach(f=>{const el=document.getElementById('dt_'+f);if(el)el.value=c[f]||'';});
+  ['dt_bld_struct_main','dt_bld_roof','dt_bld_floors'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=c[id.replace('dt_','')]||'';});
+  // Init parcels: migrate from legacy single-land fields if needed
+  const parcels = c.parcels && c.parcels.length ? c.parcels : [{chiban:c.land_chiban||'',chimoku:c.land_chimoku||'',area_reg:c.land_area_reg||'',area_actual:c.land_area_actual||'',share:c.land_share||''}];
+  setTimeout(()=>{calcBldTotal('dt');renderRoadRows('dt', c.roads||[]);renderLandParcels('dt', parcels);
+    ['bld_struct_main','bld_roof','bld_floors'].forEach(f=>comboSet('dt_'+f,'dt_'+f+'_custom',c[f]||''));
+    ['inf_water','inf_sewer','inf_gas','inf_elec'].forEach(f=>comboSet('dt_'+f,'dt_'+f+'_custom',c[f]||''));
+    renderRestrictRows('dt', c.restricts||(c.land_restrict?[c.land_restrict]:['']));},50);
+  document.getElementById('detailModal').style.display='flex';
+}
+function saveDetail() {
+  const c=getCur(); if(!c) return;
+  DETAIL_FIELDS.forEach(f=>{const el=document.getElementById('dt_'+f);if(el)c[f]=el.value.trim();});
+  ['bld_struct_main','bld_roof','bld_floors'].forEach(f=>{c[f]=comboVal('dt_'+f,'dt_'+f+'_custom');});
+  ['inf_water','inf_sewer','inf_gas','inf_elec'].forEach(f=>{c[f]=comboVal('dt_'+f,'dt_'+f+'_custom');});
+  c.restricts=collectRestricts('dt'); c.land_restrict=c.restricts.join('、');
+  c.roads = collectRoads('dt');
+  c.parcels = collectLandParcels('dt');
+  // Update legacy single-land fields from first parcel for backward compat
+  if(c.parcels.length){const p=c.parcels[0];c.land_chiban=p.chiban;c.land_chimoku=p.chimoku;c.land_area_reg=p.area_reg;c.land_area_actual=p.area_actual;c.land_share=p.share;}
+  save(); closeModal('detailModal');
+  const prevTab=activeTab; renderMain(); switchTab(prevTab);
+}
+
+function saveNotes() {
+  const c=getCur(); if(!c) return;
+  c.notes=document.getElementById('notesTA').value; save();
+  const btn=document.querySelector('#tc-notes .btn');
+  if(btn){btn.textContent='✓ 保存済み';setTimeout(()=>{if(btn)btn.textContent='保存';},1500);}
+}
+function toggleSch(sid) {
+  const c=getCur(); if(!c) return;
+  const key=mode==='buy'?'schedule':'schedule';
+  if(!c.schedule) c.schedule=mode==='buy'?buyDefaultSchedule():brkDefaultSchedule();
+  const s=c.schedule.find(x=>x.id===sid);
+  if(s){s.done=!s.done; if(s.done&&!s.date)s.date=today(); else if(!s.done)s.date='';}
+  save(); document.getElementById('schList').innerHTML=renderSchedule(c.schedule);
+}
+
+// ============================================================
+// ADD / EDIT MODALS
+// ============================================================
+// ============================================================
+
+
+// モーダルが開いているか判定
+function isModalOpen() {
+  const modals = ['buyModal','brkModal','meetModal','introModal','permitModal',
+    'photoCapModal','detailModal','estimateModal','planCapModal','customerModal','gdSettingsModal'];
+  return modals.some(id => {
+    const el = document.getElementById(id);
+    return el && el.style.display !== 'none';
+  });
+}
+
+// ── 築年数計算 ──
+function calcBuildAge(builtStr) {
+  if (!builtStr) return null;
+  let year = null, month = 1;
+
+  // 西暦パターン: 2003年3月 / 2003年 / 2003/03 / 2003-03
+  let m = builtStr.match(/(\d{4})[年\/\-](\d{1,2})/);
+  if (m) { year=parseInt(m[1]); month=parseInt(m[2]); }
+  else {
+    m = builtStr.match(/(\d{4})年?/);
+    if (m) year=parseInt(m[1]);
+  }
+
+  // 和暦パターン（優先度順に長いキーから試す）
+  if (!year) {
+    // 基準年 = 西暦 - 和暦年数 + 1 → base = 西暦元年 - 1
+    const wareki = [
+      {keys:['昭和','昭','S','s'], base:1925}, // 昭和1年=1926年
+      {keys:['平成','平','H','h'], base:1988}, // 平成1年=1989年
+      {keys:['令和','令','R','r'], base:2018}, // 令和1年=2019年
+      {keys:['大正','大','T','t'], base:1911}, // 大正1年=1912年
+      {keys:['明治','明','M'],     base:1867}, // 明治1年=1868年
+    ];
+    for (const {keys, base} of wareki) {
+      for (const k of keys) {
+        const re = new RegExp(k + '\\s*(\\d{1,2})\\s*[年]?\\s*(\\d{1,2})?\\s*[月]?');
+        const wm = builtStr.match(re);
+        if (wm) {
+          year = base + parseInt(wm[1]);
+          if (wm[2]) month = parseInt(wm[2]);
+          break;
+        }
+      }
+      if (year) break;
+    }
+  }
+
+  if (!year || year < 1800 || year > new Date().getFullYear()) return null;
+
+  const now = new Date();
+  const built = new Date(year, month - 1, 1);
+  const diff = (now - built) / (1000 * 60 * 60 * 24 * 365.25);
+  if (diff < 0) return null;
+  const y = Math.floor(diff);
+  const mo = Math.floor((diff - y) * 12);
+  if (y === 0) return `築${mo}ヶ月`;
+  if (mo === 0) return `築${y}年`;
+  return `築${y}年${mo}ヶ月`;
+}
+function updateBldAgeDisp(inputId, dispId) {
+  const val = document.getElementById(inputId)?.value || '';
+  const el  = document.getElementById(dispId);
+  if (el) el.textContent = calcBuildAge(val) || '—';
+}
+
+// 坪換算・建物面積合計
+// ============================================================
+function sqmToTsubo(sqm) {
+  const n = parseFloat(sqm);
+  if (!sqm || isNaN(n) || n <= 0) return '—';
+  return (n / 3.30579).toFixed(2);
+}
+function calcTsubo(inputId, tsuboSpanId) {
+  const val = document.getElementById(inputId)?.value || '';
+  const el = document.getElementById(tsuboSpanId);
+  if (el) el.textContent = sqmToTsubo(val);
+}
+function calcBldTotal(prefix) {
+  const f1 = parseFloat(document.getElementById(prefix+'_bld_area_1f')?.value) || 0;
+  const f2 = parseFloat(document.getElementById(prefix+'_bld_area_2f')?.value) || 0;
+  const f3 = parseFloat(document.getElementById(prefix+'_bld_area_3f')?.value) || 0;
+  const total = f1 + f2 + f3;
+  const el = document.getElementById(prefix+'_bld_area_reg');
+  if (el) el.value = total > 0 ? total.toFixed(2) : '';
+}
+
+// ============================================================
+// 価格フィールド カンマ整形
+// ============================================================
+const PRICE_IDS=['by_ask_price','by_appraisal','by_offer','by_deal','by_lot_price','by_gross','bk_ask_price','bk_appraisal','bk_sale_price','bk_deal_price'];
+function fmtPrice(el) {
+  const raw = el.value;
+  const m = raw.match(/^([\d,]*)(.*)$/); if (!m) return;
+  const num = m[1].replace(/,/g,''); const suf = m[2]; if (!num) return;
+  const nv = Number(num).toLocaleString('ja-JP') + suf;
+  if (el.value !== nv) { const p=el.selectionStart; const d=nv.length-raw.length; el.value=nv; try{el.setSelectionRange(p+d,p+d);}catch(e){} }
+}
+function bindPriceFields() {
+  PRICE_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || el._pb) return;
+    el._pb = true;
+    el.addEventListener('input', () => fmtPrice(el));
+    el.addEventListener('blur',  () => fmtPrice(el));
+  });
+}
+
+// ============================================================
+// 道路（複数）
+// ============================================================
+const ROAD_TYPE_OPTS = '<option value="">—</option><option>公道（市道）</option><option>公道（県道）</option><option>公道（国道）</option><option>私道（共有）</option><option>私道（個人）</option><option>位置指定道路</option><option>その他</option>';
+
+function roadRowHTML(prefix, idx, r) {
+  const lbl0 = idx===0 ? '接道方位・状況' : `道路${idx+1}　接道状況`;
+  const lbl1 = idx===0 ? '前面道路幅員'   : `道路${idx+1}　幅員`;
+  const lbl2 = idx===0 ? '道路種別'        : `道路${idx+1}　種別`;
+  return `<div class="road-row" id="${prefix}-road-row-${idx}">
+    <div><span class="road-row-label">${lbl0}</span><input class="fi" id="${prefix}_road_contact_${idx}" value="${r?.contact||''}" placeholder="${idx===0?'例: 南側1面接道':'例: 東側'}"></div>
+    <div><span class="road-row-label">${lbl1}</span><input class="fi" id="${prefix}_road_width_${idx}" value="${r?.width||''}" placeholder="例: 6.0m"></div>
+    <div><span class="road-row-label">${lbl2}</span><select class="fi" id="${prefix}_road_type_${idx}">${ROAD_TYPE_OPTS}</select></div>
+    ${idx===0?'<div></div>':`<div><span class="road-row-label" style="visibility:hidden">del</span><button class="road-del-btn" onclick="removeRoadRow('${prefix}',${idx})">✕</button></div>`}
+  </div>`;
+}
+function renderRoadRows(prefix, roads) {
+  const wrap = document.getElementById(prefix+'-roads-wrap'); if (!wrap) return;
+  const rows = (roads && roads.length) ? roads : [{}];
+  wrap.innerHTML = rows.map((r,i) => roadRowHTML(prefix, i, r)).join('');
+  rows.forEach((r,i) => { const sel=document.getElementById(`${prefix}_road_type_${i}`); if(sel&&r.type) sel.value=r.type; });
+  const btn = document.getElementById(prefix+'-road-add-btn');
+  if (btn) btn.style.display = rows.length >= 5 ? 'none' : '';
+}
+function addRoadRow(prefix) {
+  const wrap = document.getElementById(prefix+'-roads-wrap'); if (!wrap) return;
+  const cur = wrap.querySelectorAll('.road-row').length; if (cur >= 5) return;
+  wrap.insertAdjacentHTML('beforeend', roadRowHTML(prefix, cur, {}));
+  const btn = document.getElementById(prefix+'-road-add-btn');
+  if (btn && cur+1 >= 5) btn.style.display = 'none';
+}
+function removeRoadRow(prefix, idx) {
+  const wrap = document.getElementById(prefix+'-roads-wrap'); if (!wrap) return;
+  const row = document.getElementById(`${prefix}-road-row-${idx}`); if (row) row.remove();
+  wrap.querySelectorAll('.road-row').forEach((row, i) => {
+    row.id = `${prefix}-road-row-${i}`;
+    ['contact','width','type'].forEach((f,j)=>{ const el=row.querySelectorAll('input,select')[j]; if(el) el.id=`${prefix}_road_${f}_${i}`; });
+    const db=row.querySelector('.road-del-btn'); if(db) db.setAttribute('onclick',`removeRoadRow('${prefix}',${i})`);
+  });
+  const btn=document.getElementById(prefix+'-road-add-btn'); if(btn) btn.style.display='';
+}
+function collectRoads(prefix) {
+  const wrap = document.getElementById(prefix+'-roads-wrap'); if (!wrap) return [];
+  const result = [];
+  wrap.querySelectorAll('.road-row').forEach((_,i) => {
+    const contact=(document.getElementById(`${prefix}_road_contact_${i}`)?.value||'').trim();
+    const width  =(document.getElementById(`${prefix}_road_width_${i}`)?.value||'').trim();
+    const type   =(document.getElementById(`${prefix}_road_type_${i}`)?.value||'').trim();
+    if (contact||width||type) result.push({contact,width,type});
+  });
+  return result;
+}
+
+// ============================================================
+// 土地（複数筆）
+// ============================================================
+const CHIMOKU_OPTS = '<option value="">—</option><option>宅地</option><option>田</option><option>畑</option><option>山林</option><option>原野</option><option>雑種地</option><option>その他</option>';
+
+function parcelRowHTML(prefix, idx, p) {
+  const title = idx===0 ? '土地（第1筆）' : `土地（第${idx+1}筆）`;
+  return `<div class="land-parcel" id="${prefix}-parcel-${idx}">
+    <div class="land-parcel-head">
+      <span class="land-parcel-title">${title}</span>
+      ${idx>0?`<button class="land-parcel-del" onclick="removeLandParcel('${prefix}',${idx})">✕ 削除</button>`:''}
+    </div>
+    <div class="f2" style="margin-bottom:8px">
+      <div class="frow"><label class="flabel">所在地・地番</label><input class="fi" id="${prefix}_parcel_chiban_${idx}" value="${p?.chiban||''}" placeholder="例: 裾野市平松289番地"></div>
+      <div class="frow"><label class="flabel">地目</label><select class="fi" id="${prefix}_parcel_chimoku_${idx}">${CHIMOKU_OPTS}</select></div>
+    </div>
+    <div class="f3">
+      <div class="frow"><label class="flabel">地積・登記（㎡）</label>
+        <input class="fi" id="${prefix}_parcel_area_reg_${idx}" value="${p?.area_reg||''}" placeholder="例: 185.23" oninput="calcParcelTsubo('${prefix}',${idx})">
+        <span style="font-size:11px;color:var(--text3);margin-top:3px;display:block">＝ <span id="${prefix}_parcel_tsubo_${idx}" style="font-weight:600;color:var(--text2)">${sqmToTsubo(p?.area_reg||'')}</span> 坪</span>
+      </div>
+      <div class="frow"><label class="flabel">実測面積（㎡）</label><input class="fi" id="${prefix}_parcel_area_actual_${idx}" value="${p?.area_actual||''}" placeholder="例: 184.50"></div>
+      <div class="frow"><label class="flabel">持分</label><input class="fi" id="${prefix}_parcel_share_${idx}" value="${p?.share||''}" placeholder="例: 全部"></div>
+    </div>
+  </div>`;
+}
+function renderLandParcels(prefix, parcels) {
+  const wrap = document.getElementById(prefix+'-parcels-wrap'); if (!wrap) return;
+  const rows = (parcels && parcels.length) ? parcels : [{}];
+  wrap.innerHTML = rows.map((p,i) => parcelRowHTML(prefix, i, p)).join('');
+  rows.forEach((p,i) => { const sel=document.getElementById(`${prefix}_parcel_chimoku_${i}`); if(sel&&p.chimoku) sel.value=p.chimoku; });
+}
+function addLandParcel(prefix) {
+  const wrap = document.getElementById(prefix+'-parcels-wrap'); if (!wrap) return;
+  const cur = wrap.querySelectorAll('.land-parcel').length;
+  wrap.insertAdjacentHTML('beforeend', parcelRowHTML(prefix, cur, {}));
+}
+function removeLandParcel(prefix, idx) {
+  const wrap = document.getElementById(prefix+'-parcels-wrap'); if (!wrap) return;
+  const row = document.getElementById(`${prefix}-parcel-${idx}`); if (row) row.remove();
+  wrap.querySelectorAll('.land-parcel').forEach((row, i) => {
+    row.id = `${prefix}-parcel-${i}`;
+    const title = row.querySelector('.land-parcel-title');
+    if (title) title.textContent = i===0 ? '土地（第1筆）' : `土地（第${i+1}筆）`;
+    const db=row.querySelector('.land-parcel-del'); if(db) db.setAttribute('onclick',`removeLandParcel('${prefix}',${i})`);
+    ['chiban','chimoku','area_reg','area_actual','share'].forEach(f=>{ const el=document.getElementById(`${prefix}_parcel_${f}_${i-1}`); if(el) el.id=`${prefix}_parcel_${f}_${i}`; });
+  });
+}
+function calcParcelTsubo(prefix, idx) {
+  const val = document.getElementById(`${prefix}_parcel_area_reg_${idx}`)?.value||'';
+  const el  = document.getElementById(`${prefix}_parcel_tsubo_${idx}`);
+  if (el) el.textContent = sqmToTsubo(val);
+}
+function collectLandParcels(prefix) {
+  const wrap = document.getElementById(prefix+'-parcels-wrap'); if (!wrap) return [];
+  const result = [];
+  wrap.querySelectorAll('.land-parcel').forEach((_,i) => {
+    const chiban     =(document.getElementById(`${prefix}_parcel_chiban_${i}`)?.value||'').trim();
+    const chimoku    =(document.getElementById(`${prefix}_parcel_chimoku_${i}`)?.value||'').trim();
+    const area_reg   =(document.getElementById(`${prefix}_parcel_area_reg_${i}`)?.value||'').trim();
+    const area_actual=(document.getElementById(`${prefix}_parcel_area_actual_${i}`)?.value||'').trim();
+    const share      =(document.getElementById(`${prefix}_parcel_share_${i}`)?.value||'').trim();
+    result.push({chiban, chimoku, area_reg, area_actual, share});
+  });
+  return result;
+}
+function renderLandParcelsView(parcels) {
+  const list = (parcels||[]).filter(p=>p&&(p.chiban||p.chimoku||p.area_reg));
+  if (!list.length) return '<div class="pt-row"><span class="pt-l">地番・地目</span><span class="pt-v">—</span></div>';
+  return list.map((p,i)=>`
+    <div class="pt-row" style="${i>0?'border-top:1px dashed var(--border);':''}">
+      <span class="pt-l">${i===0?'土地（第1筆）':`土地（第${i+1}筆）`}</span>
+      <span class="pt-v" style="font-size:13px">
+        ${p.chiban||'—'} / ${p.chimoku||'—'} / ${p.area_reg?p.area_reg+'㎡（'+sqmToTsubo(p.area_reg)+'坪）':'—'}
+        ${p.share?'／ 持分: '+p.share:''}
+      </span>
+    </div>`).join('');
+}
+
+function openAddModal() {
+  if(mode==='buy') openBuyModal(null);
+  else             openBrkModal(null);
+}
+function openEditModal() {
+  const c=getCur(); if(!c) return;
+  if(mode==='buy') openBuyModal(c);
+  else             openBrkModal(c);
+}
+
+// BUY modal
+const BUY_FIELDS=['name','addr','source','zone','owner','seller','seller_tel','ask_price','appraisal','offer','deal','lots','lot_price','gross','memo','kenpeir','yosekir','toshi_kuiki','land_restrict','reg_owner','reg_mortgage','inf_water','inf_sewer','inf_gas','inf_elec'];
+const BUY_DATE_FIELDS=['infodate','contract_date','settlement_date'];
+
+function openBuyModal(c) {
+  editingBuyCaseId = c ? c.id : null;
+  const isEdit=!!c;
+  document.getElementById('buyModalTitle').textContent=isEdit?'案件情報を編集':'新規案件登録（分譲地買取）';
+  document.getElementById('buySaveBtn').textContent=isEdit?'保存':'登録する';
+  document.getElementById('buyDeleteBtn').style.display=isEdit?'':'none';
+  BUY_FIELDS.forEach(f=>{const el=document.getElementById('by_'+f);if(el)el.value=isEdit?(c[f]||''):''});
+  BUY_DATE_FIELDS.forEach(f=>{const el=document.getElementById('by_'+f);if(el)el.value=isEdit?(c[f]||''):''});
+  document.getElementById('by_status').value=isEdit?(c.status||'情報入手'):'情報入手';
+  if(!isEdit) document.getElementById('by_infodate').value=today();
+  ['by_toshi_kuiki'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=isEdit?(c[id.replace('by_','')]||''):'';});
+  document.getElementById('buyModal').style.display='flex';
+  setTimeout(()=>{
+    bindPriceFields();
+    renderRoadRows('by', isEdit?(c.roads||[]):[]);
+    const parcels = isEdit ? (c.parcels && c.parcels.length ? c.parcels : [{chiban:c.land_chiban||'',chimoku:c.land_chimoku||'',area_reg:c.land_area_reg||c.area||'',area_actual:c.land_area_actual||'',share:c.land_share||''}]) : [{}];
+    renderLandParcels('by', parcels);
+    ['inf_water','inf_sewer','inf_gas','inf_elec'].forEach(f=>comboSet('by_'+f,'by_'+f+'_custom',isEdit?(c[f]||''):''));
+    renderRestrictRows('by', isEdit?(c.restricts||[c.land_restrict||'']):['']);
+  },50);
+}
+function saveBuyCase() {
+  const name=document.getElementById('by_name').value.trim();
+  if(!name){alert('案件名を入力してください');return;}
+  const isEdit=!!editingBuyCaseId;
+  const c=isEdit?buyCases.find(x=>x.id===editingBuyCaseId):null;
+  const data={name,status:document.getElementById('by_status').value};
+  BUY_FIELDS.filter(f=>f!=='name').forEach(f=>{const el=document.getElementById('by_'+f);if(el)data[f]=el.value.trim();});
+  BUY_DATE_FIELDS.forEach(f=>{const el=document.getElementById('by_'+f);if(el)data[f]=el.value;});
+  data.roads = collectRoads('by');
+  data.parcels = collectLandParcels('by');
+  ['inf_water','inf_sewer','inf_gas','inf_elec'].forEach(f=>{data[f]=comboVal('by_'+f,'by_'+f+'_custom');});
+  data.restricts=collectRestricts('by'); data.land_restrict=data.restricts.join('、');
+  if(data.parcels.length){const p=data.parcels[0];data.land_chiban=p.chiban;data.land_chimoku=p.chimoku;data.land_area_reg=p.area_reg;data.area=p.area_reg;data.land_area_actual=p.area_actual;data.land_share=p.share;}
+  if(isEdit){Object.assign(c,data);}
+  else{const nc={id:uid(),...data,meetings:[],intros:[],photos:[],permits:{},notes:'',schedule:buyDefaultSchedule(),createdAt:today()};buyCases.unshift(nc);curId=nc.id;}
+  _skipModalConfirm=true; save();closeModal('buyModal');renderSidebar();renderMain();
+}
+
+// BRK modal
+const BRK_FIELDS=['name','addr','owner','ask_price','appraisal','sale_price','deal_price','seller','seller_tel','seller_addr','buyer','buyer_tel','buyer_finance','other_agency','other_agent','other_tel','memo','bld_struct_main','bld_roof','bld_floors','bld_built','bld_layout','bld_area_1f','bld_area_2f','bld_area_3f','bld_area_reg','bld_share','reg_owner_bld','bld_chiban','zone','kenpeir','yosekir','toshi_kuiki','land_restrict','reg_owner','reg_mortgage','inf_water','inf_sewer','inf_gas','inf_elec'];
+const BRK_DATE_FIELDS=['med_start','med_end','contract_date','settlement_date'];
+
+function openBrkModal(c) {
+  editingBrkCaseId = c ? c.id : null;
+  const isEdit=!!c;
+  document.getElementById('brkModalTitle').textContent=isEdit?'案件情報を編集':'新規案件登録（売買仲介）';
+  document.getElementById('brkSaveBtn').textContent=isEdit?'保存':'登録する';
+  document.getElementById('brkDeleteBtn').style.display=isEdit?'':'none';
+  BRK_FIELDS.forEach(f=>{const el=document.getElementById('bk_'+f);if(el)el.value=isEdit?(c[f]||''):''});
+  BRK_DATE_FIELDS.forEach(f=>{const el=document.getElementById('bk_'+f);if(el)el.value=isEdit?(c[f]||''):''});
+  document.getElementById('bk_prop_type').value=isEdit?(c.prop_type||'土地'):'土地';
+  document.getElementById('bk_status').value=isEdit?(c.status||'媒介契約'):'媒介契約';
+  document.getElementById('bk_mediation').value=isEdit?(c.mediation||'専任媒介'):'専任媒介';
+  ['bk_bld_struct_main','bk_bld_roof','bk_bld_floors','bk_toshi_kuiki','bk_inf_water','bk_inf_sewer','bk_inf_gas','bk_inf_elec'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=isEdit?(c[id.replace('bk_','')]||''):'';});
+  if(isEdit) calcBldTotal('bk');
+  document.getElementById('brkModal').style.display='flex';
+  setTimeout(()=>{
+    renderRoadRows('bk', isEdit?(c.roads||[]):[]);
+    const parcels = isEdit ? (c.parcels && c.parcels.length ? c.parcels : [{chiban:c.land_chiban||'',chimoku:c.land_chimoku||'',area_reg:c.land_area_reg||c.area||'',area_actual:c.area||'',share:c.land_share||''}]) : [{}];
+    renderLandParcels('bk', parcels);
+    ['bld_struct_main','bld_roof','bld_floors'].forEach(f=>comboSet('bk_'+f,'bk_'+f+'_custom',isEdit?(c[f]||''):''));
+    ['inf_water','inf_sewer','inf_gas','inf_elec'].forEach(f=>comboSet('bk_'+f,'bk_'+f+'_custom',isEdit?(c[f]||''):''));
+    renderRestrictRows('bk', isEdit?(c.restricts||[c.land_restrict||'']):['']);
+    updateBldAgeDisp('bk_bld_built','bk_bld_age_disp');
+  },50);
+}
+function saveBrkCase() {
+  const name=document.getElementById('bk_name').value.trim();
+  if(!name){alert('案件名を入力してください');return;}
+  const isEdit=!!editingBrkCaseId;
+  const c=isEdit?brkCases.find(x=>x.id===editingBrkCaseId):null;
+  const data={name,prop_type:document.getElementById('bk_prop_type').value,status:document.getElementById('bk_status').value,mediation:document.getElementById('bk_mediation').value};
+  BRK_FIELDS.filter(f=>f!=='name').forEach(f=>{const el=document.getElementById('bk_'+f);if(el)data[f]=el.value.trim();});
+  BRK_DATE_FIELDS.forEach(f=>{const el=document.getElementById('bk_'+f);if(el)data[f]=el.value;});
+  data.roads = collectRoads('bk');
+  data.parcels = collectLandParcels('bk');
+  ['bld_struct_main','bld_roof','bld_floors'].forEach(f=>{data[f]=comboVal('bk_'+f,'bk_'+f+'_custom');});
+  ['inf_water','inf_sewer','inf_gas','inf_elec'].forEach(f=>{data[f]=comboVal('bk_'+f,'bk_'+f+'_custom');});
+  data.restricts=collectRestricts('bk'); data.land_restrict=data.restricts.join('、');
+  if(data.parcels.length){const p=data.parcels[0];data.land_chiban=p.chiban;data.land_chimoku=p.chimoku;data.land_area_reg=p.area_reg;data.area=p.area_reg;data.land_area_actual=p.area_actual;data.land_share=p.share;}
+  if(isEdit){Object.assign(c,data);}
+  else{const nc={id:uid(),...data,meetings:[],photos:[],notes:'',schedule:brkDefaultSchedule(),createdAt:today()};brkCases.unshift(nc);curId=nc.id;}
+  _skipModalConfirm=true; save();closeModal('brkModal');renderSidebar();renderMain();
+}
+
+function deleteCurrentCase() {
+  if(!confirm('この案件を削除しますか？（元に戻せません）'))return;
+  if(mode==='buy'){buyCases=buyCases.filter(c=>c.id!==curId);(_skipModalConfirm=true, closeModal('buyModal'));}
+  else{brkCases=brkCases.filter(c=>c.id!==curId);(_skipModalConfirm=true, closeModal('brkModal'));}
+  curId=null; save(); renderSidebar(); renderMain();
+}
+
+// ============================================================
+// MEETINGS
+// ============================================================
+function openAddMeet() {
+  editingMeetId=null;
+  document.getElementById('meetModalTitle').textContent='打合せ記録を追加';
+  document.getElementById('meetSaveBtn').textContent='保存する';
+  document.getElementById('m_date').value=today();
+  ['title','body','members','next'].forEach(f=>document.getElementById('m_'+f).value='');
+  document.getElementById('m_type').value='売主打合せ';
+  document.getElementById('meetModal').style.display='flex';
+}
+function openEditMeet(mid) {
+  const c=getCur(); if(!c) return;
+  const m=(c.meetings||[]).find(x=>x.id===mid); if(!m) return;
+  editingMeetId=mid;
+  document.getElementById('meetModalTitle').textContent='打合せ記録を編集';
+  document.getElementById('meetSaveBtn').textContent='更新する';
+  document.getElementById('m_date').value=m.date||'';
+  document.getElementById('m_type').value=m.type||'売主打合せ';
+  document.getElementById('m_title').value=m.title||'';
+  document.getElementById('m_body').value=m.body||'';
+  document.getElementById('m_members').value=m.members||'';
+  document.getElementById('m_next').value=m.next||'';
+  document.getElementById('meetModal').style.display='flex';
+}
+function saveMeeting() {
+  const body=document.getElementById('m_body').value.trim();
+  if(!body){alert('内容を入力してください');return;}
+  const c=getCur(); if(!c) return;
+  if(!c.meetings) c.meetings=[];
+  const data={date:document.getElementById('m_date').value,type:document.getElementById('m_type').value,title:document.getElementById('m_title').value.trim(),body,members:document.getElementById('m_members').value.trim(),next:document.getElementById('m_next').value.trim()};
+  if(editingMeetId){const m=c.meetings.find(x=>x.id===editingMeetId);if(m)Object.assign(m,data);}
+  else{c.meetings.push({id:uid(),...data});}
+  editingMeetId=null;
+  save();closeModal('meetModal');activeTab='meetings';renderMain();
+}
+function deleteMeeting(mid) {
+  if(!confirm('削除しますか？'))return;
+  const c=getCur(); if(!c) return;
+  c.meetings=(c.meetings||[]).filter(m=>m.id!==mid); save();
+  document.getElementById('meetList').innerHTML=renderMeetings(c.meetings);
+}
+
+// ============================================================
+// INTROS (buy only)
+// ============================================================
+function openAddIntro() {
+  ['i_name','i_memo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('i_date').value=today();
+  document.getElementById('i_type').value='ハウスメーカー';
+  document.getElementById('i_status').value='紹介済み';
+  document.getElementById('introModal').style.display='flex';
+}
+function saveIntro() {
+  const name=document.getElementById('i_name').value.trim();
+  if(!name){alert('業者名を入力してください');return;}
+  const c=getCur(); if(!c) return;
+  if(!c.intros)c.intros=[];
+  c.intros.push({id:uid(),name,type:document.getElementById('i_type').value,date:document.getElementById('i_date').value,status:document.getElementById('i_status').value,memo:document.getElementById('i_memo').value.trim()});
+  save();closeModal('introModal');activeTab='intro';renderMain();
+}
+function deleteIntro(iid) {
+  if(!confirm('削除しますか？'))return;
+  const c=getCur(); if(!c) return;
+  c.intros=(c.intros||[]).filter(i=>i.id!==iid); save();activeTab='intro';renderMain();
+}
+
+// ============================================================
+// PERMITS (buy only)
+// ============================================================
+function openEditPermit(key,label) {
+  editingPermitKey=key;
+  document.getElementById('permitModalTitle').textContent=label+' を編集';
+  const c=getCur(); const pm=(c&&c.permits&&c.permits[key])||{};
+  document.getElementById('p_status').value=pm.status||'未申請';
+  document.getElementById('p_app_date').value=pm.app_date||'';
+  document.getElementById('p_permit_date').value=pm.permit_date||'';
+  document.getElementById('p_office').value=pm.office||'';
+  document.getElementById('p_note').value=pm.note||'';
+  document.getElementById('permitModal').style.display='flex';
+}
+function savePermit() {
+  const c=getCur(); if(!c||!editingPermitKey) return;
+  if(!c.permits)c.permits={};
+  c.permits[editingPermitKey]={status:document.getElementById('p_status').value,app_date:document.getElementById('p_app_date').value,permit_date:document.getElementById('p_permit_date').value,office:document.getElementById('p_office').value.trim(),note:document.getElementById('p_note').value.trim()};
+  save();closeModal('permitModal');activeTab='permits';renderMain();
+}
+
+// ============================================================
+// PHOTOS
+// ============================================================
+function dOver(e){e.preventDefault();document.getElementById('dropZone').classList.add('over');}
+function dLeave(){document.getElementById('dropZone').classList.remove('over');}
+function dDrop(e){e.preventDefault();dLeave();processFiles(Array.from(e.dataTransfer.files));}
+function fileSelect(e){processFiles(Array.from(e.target.files));e.target.value='';}
+function processFiles(files){if(!files.length)return;pendingFiles=files;pendingIdx=0;nextPhoto();}
+function nextPhoto(){
+  if(pendingIdx>=pendingFiles.length){pendingFiles=[];return;}
+  const f=pendingFiles[pendingIdx];
+  const r=new FileReader();
+  r.onload=e=>{
+    pendingData={name:f.name,dataUrl:e.target.result,size:f.size};
+    document.getElementById('photoFileName').textContent='ファイル: '+f.name;
+    document.getElementById('ph_cap').value='';
+    document.getElementById('ph_cat').value=f.name.match(/\.pdf$/i)?'その他書類':'現地写真';
+    document.getElementById('photoCapModal').style.display='flex';
+  };
+  r.readAsDataURL(f);
+}
+function confirmPhoto(){
+  if(!pendingData)return;
+  const c=getCur(); if(!c)return;
+  if(!c.photos)c.photos=[];
+  c.photos.push({id:uid(),name:pendingData.name,dataUrl:pendingData.dataUrl,category:document.getElementById('ph_cat').value,caption:document.getElementById('ph_cap').value.trim(),addedAt:today()});
+  save();closeModal('photoCapModal');pendingData=null;
+  const g=document.getElementById('photoGrid');if(g)g.innerHTML=renderPhotos(c.photos);
+  pendingIdx++;setTimeout(nextPhoto,80);
+}
+function skipPhoto(){closeModal('photoCapModal');pendingData=null;pendingIdx++;setTimeout(nextPhoto,80);}
+function deletePhoto(pid){
+  if(!confirm('削除しますか？'))return;
+  const c=getCur();if(!c)return;
+  c.photos=(c.photos||[]).filter(p=>p.id!==pid);save();
+  const g=document.getElementById('photoGrid');if(g)g.innerHTML=renderPhotos(c.photos);
+}
+function dlFile(pid){
+  const c=getCur();if(!c)return;
+  const p=(c.photos||[]).find(x=>x.id===pid);if(!p)return;
+  const a=document.createElement('a');a.href=p.dataUrl;a.download=p.name;a.click();
+}
+function openLB(pid){
+  const c=getCur();if(!c)return;
+  const p=(c.photos||[]).find(x=>x.id===pid);if(!p)return;
+  document.getElementById('lbImg').src=p.dataUrl;
+  document.getElementById('lbCap').textContent=(p.caption||p.name)+(p.category?` ／ ${p.category}`:'');
+  document.getElementById('lightbox').style.display='flex';
+}
+function closeLightbox(){document.getElementById('lightbox').style.display='none';}
+
+// ============================================================
+// ============================================================
+// SCHEDULES
+// ============================================================
+function buyDefaultSchedule(){return[
+  {id:'s1',label:'現地確認・測量確認',done:false,date:''},
+  {id:'s2',label:'査定書作成',done:false,date:''},
+  {id:'s3',label:'売主への価格提示',done:false,date:''},
+  {id:'s4',label:'条件合意',done:false,date:''},
+  {id:'s5',label:'許可申請（農地法等）',done:false,date:''},
+  {id:'s6',label:'重要事項説明書作成',done:false,date:''},
+  {id:'s7',label:'売買契約締結',done:false,date:''},
+  {id:'s8',label:'融資・決済準備',done:false,date:''},
+  {id:'s9',label:'残金決済・引渡',done:false,date:''},
+];}
+function brkDefaultSchedule(){return[
+  {id:'b1',label:'媒介契約締結',done:false,date:''},
+  {id:'b2',label:'物件調査・測量確認',done:false,date:''},
+  {id:'b3',label:'重要事項説明書作成',done:false,date:''},
+  {id:'b4',label:'広告・REINS登録',done:false,date:''},
+  {id:'b5',label:'内覧対応',done:false,date:''},
+  {id:'b6',label:'買主との価格合意',done:false,date:''},
+  {id:'b7',label:'売買契約締結',done:false,date:''},
+  {id:'b8',label:'住宅ローン申込・承認',done:false,date:''},
+  {id:'b9',label:'残金決済・引渡',done:false,date:''},
+];}
+
+// ============================================================
+// UTILS
+// ============================================================
+function closeModal(id) {
+  document.getElementById(id).style.display='none';
+}
+function closeModalWithConfirm(id) {
+  // 登録・編集モーダルは入力中の場合に確認
+  const nameId = id==='buyModal' ? 'by_name' : 'bk_name';
+  const nameEl = document.getElementById(nameId);
+  if (nameEl && nameEl.value.trim()) {
+    if (!confirm('入力中のデータが消えます。閉じてよいですか？')) return;
+  }
+  document.getElementById(id).style.display='none';
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModalWithConfirm('buyModal');closeModalWithConfirm('brkModal');['meetModal','introModal','permitModal','photoCapModal','detailModal','estimateModal','planCapModal','customerModal','gdSettingsModal'].forEach(closeModal);closeLightbox();}
+});
+document.querySelectorAll('.overlay').forEach(el=>{
+  el.addEventListener('click', e=>{
+    if (e.target !== el) return; // 内側のモーダル本体クリックは無視
+    if (el.id==='buyModal'||el.id==='brkModal') return; // 登録・編集は閉じない
+    el.style.display='none';
+  });
+});
+
+// ============================================================
+// SAMPLE DATA
+// ============================================================
+function initBuySample(){
+  buyCases.push({
+    id:uid(),name:'裾野市 富沢地区 分譲地買取（サンプル）',
+    addr:'静岡県裾野市富沢',source:'売主直接',area:'2400',zone:'第一種低層住居専用',
+    owner:'鈴木',status:'売主交渉',infodate:'2026-02-15',
+    seller:'田中 一郎',seller_tel:'090-XXXX-XXXX',
+    ask_price:'9,500万円',appraisal:'8,800万円',offer:'8,500万円',deal:'',
+    lots:'8区画',lot_price:'1,200万円/区画',gross:'9,600万円',
+    contract_date:'2026-04-30',settlement_date:'2026-05-31',
+    memo:'南向き整形地。前面道路6m。',
+    meetings:[
+      {id:uid(),date:'2026-02-20',type:'現地確認',title:'現地視察・測量図確認',body:'整形地で開発しやすい。前面道路6m確保済み。測量図入手。',members:'鈴木（社内）',next:'査定書を作成し売主へ提示'},
+      {id:uid(),date:'2026-03-05',type:'価格交渉',title:'売主へ買取価格提示',body:'8,500万円を提示。売主は9,000万円を希望。再交渉へ。',members:'鈴木（社内）、田中様（売主）',next:'3/20までに回答をもらう'},
+    ],
+    intros:[
+      {id:uid(),name:'山之内組',type:'工務店',date:'2026-03-01',status:'検討中',memo:'開発・造成担当想定'},
+    ],
+    permits:{
+      nouchi5:{status:'申請準備中',app_date:'',permit_date:'2026-05-15',office:'裾野市農業委員会',note:'農振除外の確認が先行して必要'},
+      kaihatsu:{status:'未申請',app_date:'',permit_date:'',office:'裾野市建設部',note:'500㎡超のため29条申請必要'},
+      morizumi:{status:'不要',app_date:'',permit_date:'',office:'',note:''},
+    },
+    photos:[],notes:'',
+    schedule:[
+      {id:'s1',label:'現地確認・測量確認',done:true,date:'2026-02-20'},
+      {id:'s2',label:'査定書作成',done:true,date:'2026-03-01'},
+      {id:'s3',label:'売主への価格提示',done:true,date:'2026-03-05'},
+      {id:'s4',label:'条件合意',done:false,date:''},
+      {id:'s5',label:'許可申請（農地法等）',done:false,date:''},
+      {id:'s6',label:'重要事項説明書作成',done:false,date:''},
+      {id:'s7',label:'売買契約締結',done:false,date:''},
+      {id:'s8',label:'融資・決済準備',done:false,date:''},
+      {id:'s9',label:'残金決済・引渡',done:false,date:''},
+    ],
+    createdAt:'2026-02-15'
+  });
+  save();
+}
+function initBrkSample(){
+  brkCases.push({
+    id:uid(),name:'裾野市 平松 戸建売却（サンプル）',
+    addr:'静岡県裾野市平松',prop_type:'土地・建物',area:'185',
+    mediation:'専任媒介',med_start:'2026-02-01',med_end:'2026-05-01',
+    owner:'田中',status:'内覧対応',
+    seller:'山田 花子',seller_tel:'090-1111-2222',seller_addr:'静岡県裾野市平松123',
+    buyer:'',buyer_tel:'',buyer_finance:'',
+    other_agency:'',other_agent:'',other_tel:'',
+    ask_price:'3,200万円',appraisal:'2,900万円',sale_price:'3,100万円',deal_price:'',
+    contract_date:'',settlement_date:'',
+    memo:'築22年。リフォーム済み。駅徒歩12分。',
+    meetings:[
+      {id:uid(),date:'2026-02-05',type:'売主打合せ',title:'媒介契約締結',body:'専任媒介にて契約締結。売出価格3,100万円で合意。4月末までの成約を目指す。',members:'田中（社内）、山田様（売主）',next:'REINS登録・広告準備'},
+      {id:uid(),date:'2026-03-10',type:'内覧対応',title:'内覧対応（第1回）',body:'買主候補様と内覧。好印象。3,000万円での交渉を打診。',members:'田中（社内）、買主候補 鈴木様',next:'価格交渉の回答待ち'},
+    ],
+    photos:[],notes:'',
+    schedule:[
+      {id:'b1',label:'媒介契約締結',done:true,date:'2026-02-01'},
+      {id:'b2',label:'物件調査・測量確認',done:true,date:'2026-02-10'},
+      {id:'b3',label:'重要事項説明書作成',done:false,date:''},
+      {id:'b4',label:'広告・REINS登録',done:true,date:'2026-02-15'},
+      {id:'b5',label:'内覧対応',done:true,date:'2026-03-10'},
+      {id:'b6',label:'買主との価格合意',done:false,date:''},
+      {id:'b7',label:'売買契約締結',done:false,date:''},
+      {id:'b8',label:'住宅ローン申込・承認',done:false,date:''},
+      {id:'b9',label:'残金決済・引渡',done:false,date:''},
+    ],
+    createdAt:'2026-02-01'
+  });
+  save();
+}
+if(!localStorage.getItem('buy_v1')) localStorage.setItem('buy_v1', JSON.stringify(buyCases));
+
+// ============================================================
+// ESTIMATES（造成・許認可 見積もり）
+// ============================================================
+let editingEstId = null;
+let pendingPlanFiles=[], pendingPlanIdx=0, pendingPlanData=null;
+
+function renderEstimates(estimates) {
+  if (!estimates||!estimates.length) return '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">まだ登録がありません</div>';
+  const adoptedColor={'採用':'var(--green-l)|var(--green-d)','比較中':'var(--amber-l)|var(--amber-d)','不採用':'var(--red-l)|var(--red-d)'};
+  const statusColor={'完了':'var(--teal-l)|var(--teal-d)','発注済み':'var(--blue-l)|var(--blue-d)','工事中':'var(--amber-l)|var(--amber-d)','見送り':'var(--red-l)|var(--red-d)','見積取得済み':'var(--gray-l)|var(--text2)'};
+  return `<table class="est-table"><thead><tr>
+    <th>種別</th><th>業者名</th><th>金額（万円）</th><th>見積日</th><th>ステータス</th><th>採用</th><th></th>
+  </tr></thead><tbody>
+  ${estimates.map(e=>{
+    const [abg,ac]=(adoptedColor[e.adopted]||'var(--gray-l)|var(--text3)').split('|');
+    const [sbg,sc]=(statusColor[e.status]||'var(--gray-l)|var(--text2)').split('|');
+    return `<tr>
+      <td style="font-weight:700">${e.category||'—'}</td>
+      <td>${e.vendor||'—'}</td>
+      <td style="font-weight:700;text-align:right">${e.amount?Number(e.amount).toLocaleString()+'万円':'—'}</td>
+      <td style="color:var(--text3)">${fd(e.date)}</td>
+      <td><span class="badge" style="background:${sbg};color:${sc}">${e.status||'—'}</span></td>
+      <td><span class="badge" style="background:${abg};color:${ac}">${e.adopted||'未定'}</span></td>
+      <td><button class="btn btn-sm" style="padding:3px 8px;font-size:11px" onclick="openEditEstimate('${e.id}')">編集</button></td>
+    </tr>`;
+  }).join('')}
+  </tbody></table>`;
+}
+
+function calcEstimateTotal(estimates) {
+  const total = (estimates||[]).reduce((sum,e)=>sum+(Number(e.amount)||0),0);
+  return total>0 ? total.toLocaleString()+'万円' : '—';
+}
+
+function openAddEstimate() {
+  editingEstId=null;
+  document.getElementById('estModalTitle').textContent='見積もりを追加';
+  document.getElementById('estSaveBtn').textContent='保存する';
+  document.getElementById('estDeleteBtn').style.display='none';
+  ['est_vendor','est_note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('est_amount').value='';
+  document.getElementById('est_date').value=today();
+  document.getElementById('est_category').value='';
+  document.getElementById('est_status').value='見積取得済み';
+  document.getElementById('est_adopted').value='';
+  document.getElementById('estimateModal').style.display='flex';
+}
+function openEditEstimate(eid) {
+  const c=getCur(); if(!c) return;
+  const e=(c.estimates||[]).find(x=>x.id===eid); if(!e) return;
+  editingEstId=eid;
+  document.getElementById('estModalTitle').textContent='見積もりを編集';
+  document.getElementById('estSaveBtn').textContent='更新する';
+  document.getElementById('estDeleteBtn').style.display='';
+  document.getElementById('est_category').value=e.category||'';
+  document.getElementById('est_vendor').value=e.vendor||'';
+  document.getElementById('est_amount').value=e.amount||'';
+  document.getElementById('est_date').value=e.date||'';
+  document.getElementById('est_status').value=e.status||'見積取得済み';
+  document.getElementById('est_adopted').value=e.adopted||'';
+  document.getElementById('est_note').value=e.note||'';
+  document.getElementById('estimateModal').style.display='flex';
+}
+function saveEstimate() {
+  const cat=document.getElementById('est_category').value;
+  if(!cat){alert('種別を選択してください');return;}
+  const c=getCur(); if(!c) return;
+  if(!c.estimates) c.estimates=[];
+  const data={category:cat,vendor:document.getElementById('est_vendor').value.trim(),amount:document.getElementById('est_amount').value,date:document.getElementById('est_date').value,status:document.getElementById('est_status').value,adopted:document.getElementById('est_adopted').value,note:document.getElementById('est_note').value.trim()};
+  if(editingEstId){const e=c.estimates.find(x=>x.id===editingEstId);if(e)Object.assign(e,data);}
+  else{c.estimates.push({id:uid(),...data});}
+  save(); closeModal('estimateModal'); activeTab='plan'; renderMain();
+}
+function deleteEstimate() {
+  if(!confirm('削除しますか？'))return;
+  const c=getCur(); if(!c) return;
+  c.estimates=(c.estimates||[]).filter(e=>e.id!==editingEstId);
+  save(); closeModal('estimateModal'); activeTab='plan'; renderMain();
+}
+
+// ── 計画図面 ──
+function renderPlanPhotos(photos) {
+  if(!photos||!photos.length) return '<div style="text-align:center;color:var(--text3);font-size:13px;padding:8px 0">図面がありません</div>';
+  return photos.map(p=>{
+    const isImg=p.dataUrl&&p.dataUrl.startsWith('data:image');
+    return `<div class="photo-item">
+      ${isImg?`<img src="${p.dataUrl}" onclick="openPlanLB('${p.id}')" loading="lazy">`:`<div class="photo-pdf" onclick="dlPlanFile('${p.id}')"><span>📄</span><div>${p.name}</div></div>`}
+      <div class="photo-cat">${p.category||''}</div>
+      <div class="photo-ov"><div class="photo-info"><div class="photo-name">${p.caption||p.name}</div></div></div>
+      <button class="photo-del" onclick="deletePlanPhoto('${p.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+function dOver2(e){e.preventDefault();document.getElementById('planDropZone').classList.add('over');}
+function dLeave2(){document.getElementById('planDropZone').classList.remove('over');}
+function dDrop2(e){e.preventDefault();dLeave2();processPlanFiles(Array.from(e.dataTransfer.files));}
+function planFileSelect(e){processPlanFiles(Array.from(e.target.files));e.target.value='';}
+function processPlanFiles(files){if(!files.length)return;pendingPlanFiles=files;pendingPlanIdx=0;nextPlanPhoto();}
+function nextPlanPhoto(){
+  if(pendingPlanIdx>=pendingPlanFiles.length){pendingPlanFiles=[];return;}
+  const f=pendingPlanFiles[pendingPlanIdx];
+  const r=new FileReader();
+  r.onload=e=>{
+    pendingPlanData={name:f.name,dataUrl:e.target.result};
+    document.getElementById('planFileName').textContent='ファイル: '+f.name;
+    document.getElementById('plan_cap').value='';
+    document.getElementById('plan_cat').value='区画割図';
+    document.getElementById('planCapModal').style.display='flex';
+  };
+  r.readAsDataURL(f);
+}
+function confirmPlanPhoto(){
+  if(!pendingPlanData)return;
+  const c=getCur(); if(!c) return;
+  if(!c.planPhotos) c.planPhotos=[];
+  c.planPhotos.push({id:uid(),name:pendingPlanData.name,dataUrl:pendingPlanData.dataUrl,category:document.getElementById('plan_cat').value,caption:document.getElementById('plan_cap').value.trim(),addedAt:today()});
+  save(); closeModal('planCapModal'); pendingPlanData=null;
+  const g=document.getElementById('planPhotoGrid'); if(g) g.innerHTML=renderPlanPhotos(c.planPhotos);
+  pendingPlanIdx++; setTimeout(nextPlanPhoto,80);
+}
+function skipPlanPhoto(){closeModal('planCapModal');pendingPlanData=null;pendingPlanIdx++;setTimeout(nextPlanPhoto,80);}
+function deletePlanPhoto(pid){
+  if(!confirm('削除しますか？'))return;
+  const c=getCur();if(!c)return;
+  c.planPhotos=(c.planPhotos||[]).filter(p=>p.id!==pid); save();
+  const g=document.getElementById('planPhotoGrid'); if(g) g.innerHTML=renderPlanPhotos(c.planPhotos);
+}
+function openPlanLB(pid){
+  const c=getCur();if(!c)return;
+  const p=(c.planPhotos||[]).find(x=>x.id===pid);if(!p)return;
+  document.getElementById('lbImg').src=p.dataUrl;
+  document.getElementById('lbCap').textContent=(p.caption||p.name)+(p.category?` ／ ${p.category}`:'');
+  document.getElementById('lightbox').style.display='flex';
+}
+function dlPlanFile(pid){
+  const c=getCur();if(!c)return;
+  const p=(c.planPhotos||[]).find(x=>x.id===pid);if(!p)return;
+  const a=document.createElement('a');a.href=p.dataUrl;a.download=p.name;a.click();
+}
+
+
+
+// ============================================================
+// COMBO SELECT + 直接入力
+// ============================================================
+function comboChange(selId, inputId) {
+  const sel = document.getElementById(selId);
+  const inp = document.getElementById(inputId);
+  if (!sel || !inp) return;
+  if (sel.value === '__other__') {
+    inp.classList.add('show');
+    inp.focus();
+  } else {
+    inp.classList.remove('show');
+    inp.value = '';
+  }
+}
+
+// comboの最終値を取得（その他選択時はinputの値）
+function comboVal(selId, inputId) {
+  const sel = document.getElementById(selId);
+  const inp = document.getElementById(inputId);
+  if (!sel) return '';
+  if (sel.value === '__other__') return (inp ? inp.value.trim() : '');
+  return sel.value;
+}
+
+// comboに値をセット（モーダルopen時）
+function comboSet(selId, inputId, val) {
+  const sel = document.getElementById(selId);
+  const inp = document.getElementById(inputId);
+  if (!sel) return;
+  // 選択肢に一致するか確認
+  let matched = false;
+  for (const opt of sel.options) {
+    if (opt.value === val && opt.value !== '__other__') { sel.value = val; matched = true; break; }
+    if (opt.text === val && opt.value !== '__other__' && opt.value !== '') { sel.value = opt.value || opt.text; matched = true; break; }
+  }
+  if (!matched && val) {
+    sel.value = '__other__';
+    if (inp) { inp.value = val; inp.classList.add('show'); }
+  } else if (!val) {
+    sel.value = '';
+    if (inp) { inp.classList.remove('show'); inp.value = ''; }
+  }
+}
+
+// ============================================================
+// その他制限 複数行
+// ============================================================
+function renderRestrictRows(prefix, values) {
+  const wrap = document.getElementById(prefix+'-restrict-wrap');
+  if (!wrap) return;
+  const list = (values && values.length) ? values : [''];
+  wrap.innerHTML = list.map((v,i) => `
+    <div class="restrict-row" id="${prefix}-restrict-${i}">
+      <input class="fi" id="${prefix}_restrict_${i}" value="${v||''}" placeholder="例: 防火地域、農業振興地域など">
+      ${i>0?`<button class="restrict-del" onclick="removeRestrictRow('${prefix}',${i})">✕</button>`:'<span style="width:22px"></span>'}
+    </div>`).join('');
+}
+function addRestrictRow(prefix) {
+  const wrap = document.getElementById(prefix+'-restrict-wrap');
+  if (!wrap) return;
+  const cur = wrap.querySelectorAll('.restrict-row').length;
+  wrap.insertAdjacentHTML('beforeend', `
+    <div class="restrict-row" id="${prefix}-restrict-${cur}">
+      <input class="fi" id="${prefix}_restrict_${cur}" placeholder="例: 高度地区など">
+      <button class="restrict-del" onclick="removeRestrictRow('${prefix}',${cur})">✕</button>
+    </div>`);
+}
+function removeRestrictRow(prefix, idx) {
+  const el = document.getElementById(`${prefix}-restrict-${idx}`);
+  if (el) el.remove();
+  // re-index
+  const wrap = document.getElementById(prefix+'-restrict-wrap');
+  if (!wrap) return;
+  wrap.querySelectorAll('.restrict-row').forEach((row,i) => {
+    row.id = `${prefix}-restrict-${i}`;
+    const inp = row.querySelector('input'); if (inp) inp.id = `${prefix}_restrict_${i}`;
+    const btn = row.querySelector('.restrict-del'); if (btn) btn.setAttribute('onclick', `removeRestrictRow('${prefix}',${i})`);
+  });
+}
+function collectRestricts(prefix) {
+  const wrap = document.getElementById(prefix+'-restrict-wrap');
+  if (!wrap) return [];
+  return Array.from(wrap.querySelectorAll('input')).map(el=>el.value.trim()).filter(Boolean);
+}
+
+// ============================================================
+// DRAG SORT（サイドバー並び替え）
+// ============================================================
+let dragSrcId = null;
+
+function dragStart(e, id) {
+  dragSrcId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => {
+    const el = document.querySelector(`.pi[data-id="${id}"]`);
+    if (el) el.classList.add('dragging');
+  }, 0);
+}
+function dragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.pi.drag-over').forEach(el => el.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+function dragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+function dragEnd(e) {
+  document.querySelectorAll('.pi.dragging, .pi.drag-over').forEach(el => {
+    el.classList.remove('dragging'); el.classList.remove('drag-over');
+  });
+}
+function dragDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragSrcId || dragSrcId === targetId) return;
+  const cases = getCases();
+  const srcIdx = cases.findIndex(c => c.id === dragSrcId);
+  const tgtIdx = cases.findIndex(c => c.id === targetId);
+  if (srcIdx < 0 || tgtIdx < 0) return;
+  // 移動
+  const [moved] = cases.splice(srcIdx, 1);
+  cases.splice(tgtIdx, 0, moved);
+  save();
+  renderSidebar();
+  dragSrcId = null;
+}
+
+
+// ============================================================
+// CUSTOMER（顧客対応リスト）
+// ============================================================
+let editingCustId = null;
+
+const CUST_STATUS_COLOR = {
+  '対応中':    'var(--blue-l)|var(--blue-d)',
+  '検討中':    'var(--amber-l)|var(--amber-d)',
+  '再連絡待ち':'var(--teal-l)|var(--teal-d)',
+  '申込済み':  'var(--green-l)|var(--green-d)',
+  '見送り':    'var(--red-l)|var(--red-d)',
+  '成約':      'var(--green-l)|var(--green-d)',
+};
+const CUST_TYPE_COLOR = {
+  '内見':'var(--blue-l)|var(--blue-d)',
+  '再内見':'var(--blue-l)|var(--blue-d)',
+  '申込み':'var(--green-l)|var(--green-d)',
+  '価格交渉':'var(--amber-l)|var(--amber-d)',
+};
+
+function renderCustomers(customers) {
+  if (!customers || !customers.length) {
+    return '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">まだ登録がありません</div>';
+  }
+  return customers.slice().reverse().map(cust => {
+    const [sbg,sc] = (CUST_STATUS_COLOR[cust.status]||'var(--gray-l)|var(--text2)').split('|');
+    const [tbg,tc] = (CUST_TYPE_COLOR[cust.type]||'var(--gray-l)|var(--text2)').split('|');
+    return `<div class="cust-card">
+      <div class="cust-head">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="cust-name">${cust.name||'（氏名未入力）'}</span>
+          <span class="cust-badge" style="background:${tbg};color:${tc}">${cust.type}</span>
+          <span style="font-size:11px;color:var(--text3)">${cust.date||''}</span>
+        </div>
+        <div class="cust-actions">
+          <span class="cust-badge" style="background:${sbg};color:${sc}">${cust.status}</span>
+          <button class="btn btn-sm" style="padding:3px 8px;font-size:11px" onclick="openEditCustomer('${cust.id}')">編集</button>
+          <button class="del-btn" onclick="deleteCustomerById('${cust.id}')">✕</button>
+        </div>
+      </div>
+      <div class="cust-body">
+        ${cust.tel||cust.family||cust.budget?`<div style="display:flex;gap:16px;flex-wrap:wrap">
+          ${cust.tel?`<span class="cust-row"><span class="cust-label">連絡先</span><span class="cust-val">${cust.tel}</span></span>`:''}
+          ${cust.family?`<span class="cust-row"><span class="cust-label">家族構成</span><span class="cust-val">${cust.family}</span></span>`:''}
+          ${cust.budget?`<span class="cust-row"><span class="cust-label">予算</span><span class="cust-val">${cust.budget}</span></span>`:''}
+          ${cust.finance?`<span class="cust-row"><span class="cust-label">資金計画</span><span class="cust-val">${cust.finance}</span></span>`:''}
+        </div>`:''}
+        ${cust.note?`<div class="cust-note">${cust.note}</div>`:''}
+        ${cust.next?`<div style="padding:6px 10px;background:var(--amber-l);border-radius:var(--rs);font-size:12px;color:var(--amber-d);font-weight:600">→ 次回: ${cust.next}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddCustomer() {
+  editingCustId = null;
+  document.getElementById('custModalTitle').textContent = '顧客対応を追加';
+  document.getElementById('custSaveBtn').textContent = '保存する';
+  document.getElementById('custDeleteBtn').style.display = 'none';
+  ['cust_name','cust_tel','cust_family','cust_budget','cust_finance','cust_next','cust_note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cust_date').value = today();
+  document.getElementById('cust_type').value = '内見';
+  document.getElementById('cust_status').value = '対応中';
+  document.getElementById('customerModal').style.display = 'flex';
+}
+
+function openEditCustomer(cid) {
+  const c = getCur(); if (!c) return;
+  const cust = (c.customers||[]).find(x=>x.id===cid); if (!cust) return;
+  editingCustId = cid;
+  document.getElementById('custModalTitle').textContent = '顧客対応を編集';
+  document.getElementById('custSaveBtn').textContent = '更新する';
+  document.getElementById('custDeleteBtn').style.display = '';
+  document.getElementById('cust_date').value = cust.date||'';
+  document.getElementById('cust_type').value = cust.type||'内見';
+  document.getElementById('cust_name').value = cust.name||'';
+  document.getElementById('cust_tel').value = cust.tel||'';
+  document.getElementById('cust_family').value = cust.family||'';
+  document.getElementById('cust_budget').value = cust.budget||'';
+  document.getElementById('cust_finance').value = cust.finance||'';
+  document.getElementById('cust_status').value = cust.status||'対応中';
+  document.getElementById('cust_next').value = cust.next||'';
+  document.getElementById('cust_note').value = cust.note||'';
+  document.getElementById('customerModal').style.display = 'flex';
+}
+
+function saveCustomer() {
+  const note = document.getElementById('cust_note').value.trim();
+  if (!note) { alert('対応内容を入力してください'); return; }
+  const c = getCur(); if (!c) return;
+  if (!c.customers) c.customers = [];
+  const data = {
+    date:    document.getElementById('cust_date').value,
+    type:    document.getElementById('cust_type').value,
+    name:    document.getElementById('cust_name').value.trim(),
+    tel:     document.getElementById('cust_tel').value.trim(),
+    family:  document.getElementById('cust_family').value.trim(),
+    budget:  document.getElementById('cust_budget').value.trim(),
+    finance: document.getElementById('cust_finance').value.trim(),
+    status:  document.getElementById('cust_status').value,
+    next:    document.getElementById('cust_next').value.trim(),
+    note,
+  };
+  if (editingCustId) {
+    const cust = c.customers.find(x=>x.id===editingCustId);
+    if (cust) Object.assign(cust, data);
+  } else {
+    c.customers.push({ id: uid(), ...data });
+  }
+  save(); closeModal('customerModal'); activeTab='customers'; renderMain();
+}
+
+function deleteCustomer() {
+  if (!confirm('この記録を削除しますか？')) return;
+  const c = getCur(); if (!c) return;
+  c.customers = (c.customers||[]).filter(x=>x.id!==editingCustId);
+  save(); closeModal('customerModal'); activeTab='customers'; renderMain();
+}
+
+function deleteCustomerById(cid) {
+  if (!confirm('この記録を削除しますか？')) return;
+  const c = getCur(); if (!c) return;
+  c.customers = (c.customers||[]).filter(x=>x.id!==cid);
+  save();
+  const el = document.getElementById('customerList');
+  if (el) el.innerHTML = renderCustomers(c.customers);
+}
+
+
+// ============================================================
+// GOOGLE DRIVE 連携
+// ============================================================
+let gdAccessToken = null;
+let gdFileId      = null;
+let gdClientId    = localStorage.getItem('gd_client_id') || '';
+let gdFilename    = localStorage.getItem('gd_filename')  || '案件データ.json';
+let gdTokenClient = null;
+let gdInited      = false;
+
+function gdUpdateStatus(msg, connected) {
+  const el = document.getElementById('gdStatus');
+  if (el) el.textContent = msg;
+  document.getElementById('gdSaveBtn').disabled = !connected;
+  document.getElementById('gdLoadBtn').disabled = !connected;
+  const btn = document.getElementById('gdBtn');
+  if (btn) {
+    btn.textContent = connected ? '✅ ' + (gdUserEmail||'接続済み') : '🔗 Googleドライブ連携';
+    btn.onclick = connected ? gdSignOut : gdSignIn;
+  }
+}
+
+let gdUserEmail = '';
+
+function gdSignIn() {
+  if (!gdClientId) { openGdSettings(); return; }
+  if (!window.google) { alert('Google APIの読み込み中です。しばらく待ってから再試行してください。'); return; }
+  try {
+    gdTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: gdClientId,
+      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+      callback: async (resp) => {
+        if (resp.error) { alert('認証エラー: ' + resp.error); return; }
+        gdAccessToken = resp.access_token;
+        // Get user info
+        try {
+          const info = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: 'Bearer ' + gdAccessToken }
+          }).then(r=>r.json());
+          gdUserEmail = info.email || '';
+        } catch(e) {}
+        gdUpdateStatus('接続済み: ' + gdUserEmail, true);
+        // Auto-load on sign-in
+        await gdFindFile();
+        if (gdFileId) {
+          if (confirm('Googleドライブにデータが見つかりました。読み込みますか？')) await gdLoad();
+        }
+      }
+    });
+    gdTokenClient.requestAccessToken({ prompt: 'consent' });
+  } catch(e) {
+    alert('初期化エラー: ' + e.message + '\nClient IDが正しいか確認してください。');
+  }
+}
+
+function gdSignOut() {
+  if (!gdAccessToken) return;
+  if (window.google) google.accounts.oauth2.revoke(gdAccessToken, ()=>{});
+  gdAccessToken = null; gdFileId = null; gdUserEmail = '';
+  gdUpdateStatus('未接続', false);
+}
+
+function openGdSettings() {
+  document.getElementById('gd_client_id').value = gdClientId;
+  document.getElementById('gd_filename').value  = gdFilename;
+  document.getElementById('gdSettingsModal').style.display = 'flex';
+}
+
+function gdSaveSettings() {
+  const cid = document.getElementById('gd_client_id').value.trim();
+  const fn  = document.getElementById('gd_filename').value.trim() || '案件データ.json';
+  if (!cid) { alert('クライアントIDを入力してください'); return; }
+  gdClientId = cid; gdFilename = fn;
+  localStorage.setItem('gd_client_id', cid);
+  localStorage.setItem('gd_filename',  fn);
+  closeModal('gdSettingsModal');
+  gdSignIn();
+}
+
+async function gdFindFile() {
+  if (!gdAccessToken) return;
+  try {
+    const q = encodeURIComponent(`name='${gdFilename}' and mimeType='application/json' and trashed=false`);
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`, {
+      headers: { Authorization: 'Bearer ' + gdAccessToken }
+    }).then(r=>r.json());
+    if (res.files && res.files.length > 0) {
+      gdFileId = res.files[0].id;
+    }
+  } catch(e) { console.error('gdFindFile error', e); }
+}
+
+async function gdSave() {
+  if (!gdAccessToken) { alert('先にGoogleドライブに接続してください'); return; }
+  const btn = document.getElementById('gdSaveBtn');
+  btn.textContent = '保存中…'; btn.disabled = true;
+  try {
+    const payload = JSON.stringify({ version:2, exportedAt:new Date().toISOString(), buyCases, brkCases }, null, 2);
+    const boundary = 'boundary_' + Date.now();
+    const meta = JSON.stringify({ name: gdFilename, mimeType: 'application/json' });
+    const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--${boundary}--`;
+    const method = gdFileId ? 'PATCH' : 'POST';
+    const url = gdFileId
+      ? `https://www.googleapis.com/upload/drive/v3/files/${gdFileId}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    const res = await fetch(url, {
+      method,
+      headers: { Authorization: 'Bearer ' + gdAccessToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body
+    }).then(r=>r.json());
+    if (res.id) {
+      gdFileId = res.id;
+      btn.textContent = '✅ 保存完了';
+      setTimeout(()=>{ btn.textContent='☁ 保存'; btn.disabled=false; }, 2000);
+    } else {
+      throw new Error(JSON.stringify(res));
+    }
+  } catch(e) {
+    alert('保存エラー: ' + e.message);
+    btn.textContent = '☁ 保存'; btn.disabled = false;
+  }
+}
+
+async function gdLoad() {
+  if (!gdAccessToken) { alert('先にGoogleドライブに接続してください'); return; }
+  const btn = document.getElementById('gdLoadBtn');
+  btn.textContent = '読込中…'; btn.disabled = true;
+  try {
+    await gdFindFile();
+    if (!gdFileId) { alert('ドライブにデータファイルが見つかりません。先に「☁ 保存」してください。'); btn.textContent='☁ 読込み'; btn.disabled=false; return; }
+    const text = await fetch(`https://www.googleapis.com/drive/v3/files/${gdFileId}?alt=media`, {
+      headers: { Authorization: 'Bearer ' + gdAccessToken }
+    }).then(r=>r.text());
+    const data = JSON.parse(text);
+    const newBuy = data.buyCases || data.cases || [];
+    const newBrk = data.brkCases || [];
+    if (!confirm(`Googleドライブから読み込みます。\n\n分譲地買取: ${newBuy.length}件\n売買仲介: ${newBrk.length}件\n\n現在のデータを上書きしますか？`)) {
+      btn.textContent='☁ 読込み'; btn.disabled=false; return;
+    }
+    buyCases = newBuy; brkCases = newBrk;
+    save(); curId=null; renderSidebar(); renderMain();
+    btn.textContent = '✅ 読込完了';
+    setTimeout(()=>{ btn.textContent='☁ 読込み'; btn.disabled=false; }, 2000);
+    if (buyCases.length) { setMode('buy'); selectCase(buyCases[0].id); }
+    else if (brkCases.length) { setMode('brk'); selectCase(brkCases[0].id); }
+  } catch(e) {
+    alert('読込エラー: ' + e.message);
+    btn.textContent = '☁ 読込み'; btn.disabled = false;
+  }
+}
+
+// 自動保存タイマー（gdSaveが定義された後に呼ばれる）
+function scheduleGdSave() {
+  if (!gdAccessToken) return;
+  clearTimeout(scheduleGdSave._timer);
+  scheduleGdSave._timer = setTimeout(()=>{ gdSave(); }, 3000);
+}
+
+// 初期化時にClient IDがあれば設定ボタンの表示を更新
+window.addEventListener('load', ()=>{
+  if (gdClientId) {
+    const btn = document.getElementById('gdBtn');
+    if (btn) btn.title = 'クライアントID設定済み: ' + gdClientId;
+  }
+  gdUpdateStatus(gdClientId ? 'Client ID設定済み（未接続）' : '未設定 — クリックして設定', false);
+});
+
+// ============================================================
+// DATA EXPORT / IMPORT
+// ============================================================
+
+
+
+// ============================================================
+// パスワード保護
+// ============================================================
+// ★ パスワードをここで変更できます
+
+
+
+// ══ ASYNC INIT ══
+async function init() {
+  // Try window.storage first (Claude.ai Artifact)
+  if (window.storage) {
+    try {
+      const buyRes = await window.storage.get('buy_v1').catch(()=>null);
+      const brkRes = await window.storage.get('brk_v1').catch(()=>null);
+      if (buyRes && buyRes.value) buyCases = JSON.parse(buyRes.value);
+      if (brkRes && brkRes.value) brkCases = JSON.parse(brkRes.value);
+    } catch(e) {}
+  }
+  // Fallback to localStorage
+  if (!buyCases.length) {
+    try { const v=localStorage.getItem('buy_v1'); if(v) buyCases=JSON.parse(v); } catch(e){}
+  }
+  if (!brkCases.length) {
+    try { const v=localStorage.getItem('brk_v1'); if(v) brkCases=JSON.parse(v); } catch(e){}
+  }
+  // Insert sample data on first run
+  const buyInit = await (window.storage ? window.storage.get('buy_init').catch(()=>null) : Promise.resolve(localStorage.getItem('buy_init')?{value:'1'}:null));
+  if (!buyCases.length && !buyInit) {
+    if (window.storage) window.storage.set('buy_init','1').catch(()=>{});
+    else { try{localStorage.setItem('buy_init','1');}catch(e){} }
+    initBuySample();
+  }
+  const brkInit = await (window.storage ? window.storage.get('brk_init').catch(()=>null) : Promise.resolve(localStorage.getItem('brk_init')?{value:'1'}:null));
+  if (!brkCases.length && !brkInit) {
+    if (window.storage) window.storage.set('brk_init','1').catch(()=>{});
+    else { try{localStorage.setItem('brk_init','1');}catch(e){} }
+    initBrkSample();
+  }
+  renderSidebar();
+  if (buyCases.length) selectCase(buyCases[0].id);
+}
+init();
+</script>
+</body>
+</html>
