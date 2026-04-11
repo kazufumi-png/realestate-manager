@@ -466,12 +466,17 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
     <div class="frow"><label class="flabel">所有者（土地）</label><input class="fi" id="by_reg_owner" placeholder="登記上の所有者"></div>
     <div class="frow"><label class="flabel">抵当権・その他権利</label><input class="fi" id="by_reg_mortgage" placeholder="例: ○○銀行 抵当権設定あり"></div>
   </div>
+  <div class="frow"><label class="flabel">登記簿上の所有者住所</label><input class="fi" id="by_reg_owner_addr" placeholder="例: 静岡県裾野市平松123番地"></div>
 
   <div class="mdiv"></div><div class="msub">▍ 売主情報</div>
-  <div class="frow"><label class="flabel">売主氏名</label><input class="fi" id="by_seller"></div>
   <div class="f2">
+    <div class="frow"><label class="flabel">売主氏名</label><input class="fi" id="by_seller"></div>
     <div class="frow"><label class="flabel">売主連絡先</label><input class="fi" id="by_seller_tel"></div>
+  </div>
+  <div class="frow"><label class="flabel">現住所（住民票）</label><input class="fi" id="by_seller_addr" placeholder="例: 静岡県裾野市平松123番地"></div>
+  <div class="f2">
     <div class="frow"><label class="flabel">売主希望価格</label><input class="fi" id="by_ask_price" placeholder="例: 9,500万円"></div>
+    <div class="frow"></div>
   </div>
 
   <div class="mdiv"></div><div class="msub">▍ 価格・分譲計画</div>
@@ -646,6 +651,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
     <div class="frow"><label class="flabel">所有者（土地）</label><input class="fi" id="bk_reg_owner"></div>
     <div class="frow"><label class="flabel">抵当権・その他権利</label><input class="fi" id="bk_reg_mortgage" placeholder="例: ○○銀行 抵当権設定あり"></div>
   </div>
+  <div class="frow"><label class="flabel">登記簿上の所有者住所</label><input class="fi" id="bk_reg_owner_addr" placeholder="例: 静岡県裾野市平松123番地"></div>
 
   <div class="mdiv"></div><div class="msub">▍ 設備・インフラ</div>
   <div class="f2">
@@ -724,7 +730,7 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
   <div class="f3">
     <div class="frow"><label class="flabel">売主氏名</label><input class="fi" id="bk_seller"></div>
     <div class="frow"><label class="flabel">連絡先</label><input class="fi" id="bk_seller_tel"></div>
-    <div class="frow"><label class="flabel">住所</label><input class="fi" id="bk_seller_addr"></div>
+    <div class="frow"><label class="flabel">現住所（住民票）</label><input class="fi" id="bk_seller_addr"></div>
   </div>
   <div class="mdiv"></div><div class="msub">▍ 買主情報</div>
   <div class="f3">
@@ -2045,7 +2051,7 @@ function collectRoads(prefix) {
 // ============================================================
 // 土地（複数筆）
 // ============================================================
-const CHIMOKU_OPTS = '<option value="">—</option><option>宅地</option><option>田</option><option>畑</option><option>山林</option><option>原野</option><option>雑種地</option><option>その他</option>';
+const CHIMOKU_OPTS = '<option value="">—</option><option>宅地</option><option>田</option><option>畑</option><option>山林</option><option>原野</option><option>雑種地</option><option>公衆用道路</option><option>水路</option><option>その他</option><option value="__other__">直接入力...</option>';
 
 function parcelRowHTML(prefix, idx, p) {
   const title = idx===0 ? '土地（第1筆）' : `土地（第${idx+1}筆）`;
@@ -2056,7 +2062,10 @@ function parcelRowHTML(prefix, idx, p) {
     </div>
     <div class="f2" style="margin-bottom:8px">
       <div class="frow"><label class="flabel">所在地・地番</label><input class="fi" id="${prefix}_parcel_chiban_${idx}" value="${p?.chiban||''}" placeholder="例: 裾野市平松289番地"></div>
-      <div class="frow"><label class="flabel">地目</label><select class="fi" id="${prefix}_parcel_chimoku_${idx}">${CHIMOKU_OPTS}</select></div>
+      <div class="frow"><label class="flabel">地目</label>
+        <select class="fi" id="${prefix}_parcel_chimoku_${idx}" onchange="chimokuChange('${prefix}',${idx})">${CHIMOKU_OPTS}</select>
+        <input class="fi" id="${prefix}_parcel_chimoku_custom_${idx}" placeholder="地目を直接入力" style="display:none;margin-top:4px">
+      </div>
     </div>
     <div class="f3">
       <div class="frow"><label class="flabel">地積・登記（㎡）</label>
@@ -2072,7 +2081,20 @@ function renderLandParcels(prefix, parcels) {
   const wrap = document.getElementById(prefix+'-parcels-wrap'); if (!wrap) return;
   const rows = (parcels && parcels.length) ? parcels : [{}];
   wrap.innerHTML = rows.map((p,i) => parcelRowHTML(prefix, i, p)).join('');
-  rows.forEach((p,i) => { const sel=document.getElementById(`${prefix}_parcel_chimoku_${i}`); if(sel&&p.chimoku) sel.value=p.chimoku; });
+  rows.forEach((p,i) => {
+    const sel=document.getElementById(`${prefix}_parcel_chimoku_${i}`);
+    const inp=document.getElementById(`${prefix}_parcel_chimoku_custom_${i}`);
+    if (!sel) return;
+    // 選択肢に一致するか確認
+    let matched = false;
+    for (const opt of sel.options) {
+      if (opt.value === p.chimoku && opt.value !== '__other__') { sel.value=p.chimoku; matched=true; break; }
+    }
+    if (!matched && p.chimoku) {
+      sel.value = '__other__';
+      if (inp) { inp.value=p.chimoku; inp.style.display='block'; }
+    }
+  });
 }
 function addLandParcel(prefix) {
   const wrap = document.getElementById(prefix+'-parcels-wrap'); if (!wrap) return;
@@ -2090,6 +2112,20 @@ function removeLandParcel(prefix, idx) {
     ['chiban','chimoku','area_reg','area_actual','share'].forEach(f=>{ const el=document.getElementById(`${prefix}_parcel_${f}_${i-1}`); if(el) el.id=`${prefix}_parcel_${f}_${i}`; });
   });
 }
+
+function chimokuChange(prefix, idx) {
+  const sel = document.getElementById(`${prefix}_parcel_chimoku_${idx}`);
+  const inp = document.getElementById(`${prefix}_parcel_chimoku_custom_${idx}`);
+  if (!sel || !inp) return;
+  if (sel.value === '__other__') {
+    inp.style.display = 'block';
+    inp.focus();
+  } else {
+    inp.style.display = 'none';
+    inp.value = '';
+  }
+}
+
 function calcParcelTsubo(prefix, idx) {
   const val = document.getElementById(`${prefix}_parcel_area_reg_${idx}`)?.value||'';
   const el  = document.getElementById(`${prefix}_parcel_tsubo_${idx}`);
@@ -2100,7 +2136,9 @@ function collectLandParcels(prefix) {
   const result = [];
   wrap.querySelectorAll('.land-parcel').forEach((_,i) => {
     const chiban     =(document.getElementById(`${prefix}_parcel_chiban_${i}`)?.value||'').trim();
-    const chimoku    =(document.getElementById(`${prefix}_parcel_chimoku_${i}`)?.value||'').trim();
+    const chimokuSel = (document.getElementById(`${prefix}_parcel_chimoku_${i}`)?.value||'').trim();
+    const chimokuInp = (document.getElementById(`${prefix}_parcel_chimoku_custom_${i}`)?.value||'').trim();
+    const chimoku    = chimokuSel==='__other__' ? chimokuInp : chimokuSel;
     const area_reg   =(document.getElementById(`${prefix}_parcel_area_reg_${i}`)?.value||'').trim();
     const area_actual=(document.getElementById(`${prefix}_parcel_area_actual_${i}`)?.value||'').trim();
     const share      =(document.getElementById(`${prefix}_parcel_share_${i}`)?.value||'').trim();
@@ -2132,7 +2170,7 @@ function openEditModal() {
 }
 
 // BUY modal
-const BUY_FIELDS=['name','addr','source','zone','owner','seller','seller_tel','ask_price','appraisal','offer','deal','lots','lot_price','gross','memo','kenpeir','yosekir','toshi_kuiki','land_restrict','reg_owner','reg_mortgage','inf_water','inf_sewer','inf_gas','inf_elec'];
+const BUY_FIELDS=['name','addr','source','zone','owner','seller','seller_tel','seller_addr','ask_price','appraisal','offer','deal','lots','lot_price','gross','memo','kenpeir','yosekir','toshi_kuiki','land_restrict','reg_owner','reg_owner_addr','reg_mortgage','inf_water','inf_sewer','inf_gas','inf_elec'];
 const BUY_DATE_FIELDS=['infodate','contract_date','settlement_date'];
 
 function openBuyModal(c) {
@@ -2175,7 +2213,7 @@ function saveBuyCase() {
 }
 
 // BRK modal
-const BRK_FIELDS=['name','addr','owner','ask_price','appraisal','sale_price','deal_price','seller','seller_tel','seller_addr','buyer','buyer_tel','buyer_finance','other_agency','other_agent','other_tel','memo','bld_struct_main','bld_roof','bld_floors','bld_built','bld_layout','bld_area_1f','bld_area_2f','bld_area_3f','bld_area_reg','bld_share','reg_owner_bld','bld_chiban','zone','kenpeir','yosekir','toshi_kuiki','land_restrict','reg_owner','reg_mortgage','inf_water','inf_sewer','inf_gas','inf_elec'];
+const BRK_FIELDS=['name','addr','owner','ask_price','appraisal','sale_price','deal_price','seller','seller_tel','seller_addr','buyer','buyer_tel','buyer_finance','other_agency','other_agent','other_tel','memo','bld_struct_main','bld_roof','bld_floors','bld_built','bld_layout','bld_area_1f','bld_area_2f','bld_area_3f','bld_area_reg','bld_share','reg_owner_bld','bld_chiban','zone','kenpeir','yosekir','toshi_kuiki','land_restrict','reg_owner','reg_owner_addr','reg_mortgage','inf_water','inf_sewer','inf_gas','inf_elec'];
 const BRK_DATE_FIELDS=['med_start','med_end','contract_date','settlement_date'];
 
 function openBrkModal(c) {
