@@ -159,6 +159,18 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 .gdrive-btn.gd-load:hover{background:var(--teal-l);}
 .gdrive-btn:disabled{opacity:.4;cursor:not-allowed;}
 .gdrive-status{font-size:10px;color:var(--text3);text-align:center;padding:2px 14px 4px;background:var(--surface);}
+
+/* PASSWORD */
+.pw-screen{position:fixed;inset:0;background:#1a1a1a;display:flex;align-items:center;justify-content:center;z-index:9999;}
+.pw-box{background:#fff;border-radius:12px;padding:40px 36px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center;}
+.pw-logo{font-size:32px;margin-bottom:8px;}
+.pw-title{font-size:18px;font-weight:800;color:#1a1a1a;margin-bottom:4px;}
+.pw-sub{font-size:12px;color:#888;margin-bottom:24px;}
+.pw-input{width:100%;padding:12px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px;font-family:inherit;outline:none;box-sizing:border-box;text-align:center;letter-spacing:2px;}
+.pw-input:focus{border-color:#2d7d46;}
+.pw-btn{width:100%;padding:12px;background:#2d7d46;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:12px;}
+.pw-btn:hover{background:#236038;}
+.pw-error{color:#e53935;font-size:13px;margin-top:10px;display:none;}
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
 
@@ -180,7 +192,20 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 <body>
 
 <!-- PASSWORD -->
-<div class="app">
+
+<div class="pw-screen" id="pwScreen">
+  <div class="pw-box">
+    <div class="pw-logo">🏢</div>
+    <div class="pw-title">賃貸物件管理</div>
+    <div class="pw-sub">第一開発株式会社</div>
+    <input class="pw-input" type="password" id="pwInput" placeholder="パスワードを入力"
+      onkeydown="if(event.key==='Enter')checkPassword()">
+    <button class="pw-btn" onclick="checkPassword()">ログイン</button>
+    <div class="pw-error" id="pwError">パスワードが違います</div>
+  </div>
+</div>
+
+<div class="app" id="mainApp" style="display:none">
 
 <!-- SIDEBAR -->
 <div class="sidebar">
@@ -251,9 +276,83 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
         <option value="">—</option><option>木造</option><option>軽量鉄骨造</option>
         <option>重量鉄骨造</option><option>鉄筋コンクリート造</option><option>その他</option>
       </select></div>
+    <div class="frow"><label class="flabel">屋根材</label>
+      <select class="fi" id="bld_roof">
+        <option value="">—</option><option>スレート（コロニアル）</option><option>ガルバリウム鋼板</option>
+        <option>瓦（陶器瓦）</option><option>瓦（セメント瓦）</option><option>その他</option>
+      </select></div>
     <div class="frow"><label class="flabel">階数</label><input class="fi" id="bld_floors" placeholder="例: 3階建"></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 土地情報</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">所在地・地番</label><input class="fi" id="bld_land_chiban" placeholder="例: 裾野市平松289番地"></div>
+    <div class="frow"><label class="flabel">地目</label>
+      <select class="fi" id="bld_land_chimoku">
+        <option value="">—</option><option>宅地</option><option>田</option><option>畑</option>
+        <option>山林</option><option>雑種地</option><option>その他</option>
+      </select></div>
+  </div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">地積・登記（㎡）</label>
+      <input class="fi" id="bld_land_area" placeholder="例: 350.5" oninput="updateLandTsubo()">
+      <span style="font-size:11px;color:var(--text3);margin-top:3px;display:block">＝ <span id="bld_land_tsubo" style="font-weight:600;color:var(--text2)">—</span> 坪</span>
+    </div>
+    <div class="frow"><label class="flabel">持分</label><input class="fi" id="bld_land_share" placeholder="例: 全部"></div>
     <div class="frow"><label class="flabel">駐車場</label><input class="fi" id="bld_parking" placeholder="例: 8台分"></div>
   </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 都市計画・法令制限</div>
+  <div class="f3">
+    <div class="frow"><label class="flabel">用途地域</label><input class="fi" id="bld_zone" placeholder="例: 第一種低層住居専用"></div>
+    <div class="frow"><label class="flabel">建ぺい率</label><input class="fi" id="bld_kenpeir" placeholder="例: 60%"></div>
+    <div class="frow"><label class="flabel">容積率</label><input class="fi" id="bld_yosekir" placeholder="例: 200%"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">都市計画区域</label>
+      <select class="fi" id="bld_toshi_kuiki">
+        <option value="">—</option><option>市街化区域</option><option>市街化調整区域</option>
+        <option>非線引き都市計画区域</option><option>都市計画区域外</option>
+      </select></div>
+    <div class="frow"><label class="flabel">その他制限</label><input class="fi" id="bld_restrict" placeholder="例: 防火地域・農振など"></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 設備・インフラ</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">上水道</label>
+      <select class="fi" id="bld_inf_water">
+        <option value="">—</option><option>公営水道（引込済）</option><option>公営水道（引込なし）</option>
+        <option>井戸</option><option>なし</option>
+      </select></div>
+    <div class="frow"><label class="flabel">下水道</label>
+      <select class="fi" id="bld_inf_sewer">
+        <option value="">—</option><option>公共下水（接続済）</option><option>公共下水（接続なし）</option>
+        <option>浄化槽</option><option>汲み取り</option>
+      </select></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">ガス</label>
+      <select class="fi" id="bld_inf_gas">
+        <option value="">—</option><option>都市ガス（引込済）</option><option>都市ガス（引込なし）</option>
+        <option>プロパンガス</option><option>なし</option>
+      </select></div>
+    <div class="frow"><label class="flabel">電気</label>
+      <select class="fi" id="bld_inf_elec">
+        <option value="">—</option><option>東京電力（引込済）</option><option>東京電力（引込なし）</option>
+        <option>引込なし</option><option>なし</option>
+      </select></div>
+  </div>
+
+  <div class="mdiv"></div><div class="msub">▍ 登記情報</div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">所有者氏名</label><input class="fi" id="bld_reg_owner" placeholder="登記上の所有者"></div>
+    <div class="frow"><label class="flabel">抵当権・その他権利</label><input class="fi" id="bld_reg_mortgage" placeholder="例: ○○銀行 抵当権設定あり"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label class="flabel">登記簿上の住所</label><input class="fi" id="bld_reg_owner_addr" placeholder="例: 静岡県裾野市平松123番地"></div>
+    <div class="frow"><label class="flabel">現住所（住民票）</label><input class="fi" id="bld_owner_current_addr" placeholder="例: 静岡県裾野市…"></div>
+  </div>
+
   <div class="mdiv"></div><div class="msub">▍ 管理情報</div>
   <div class="f2">
     <div class="frow"><label class="flabel">管理会社</label><input class="fi" id="bld_mgmt_co" placeholder="例: 自社管理"></div>
@@ -429,6 +528,31 @@ textarea.fi{min-height:80px;resize:vertical;line-height:1.6;}
 // ============================================================
 // PASSWORD
 // ============================================================
+
+
+// ============================================================
+// パスワード保護
+// ============================================================
+const APP_PASSWORD = '12031006';
+function checkPassword() {
+  const input = document.getElementById('pwInput').value;
+  if (input === APP_PASSWORD) {
+    document.getElementById('pwScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = '';
+    sessionStorage.setItem('rental_pw_ok', '1');
+  } else {
+    const err = document.getElementById('pwError');
+    err.style.display = 'block';
+    document.getElementById('pwInput').value = '';
+    setTimeout(() => { err.style.display = 'none'; }, 2000);
+  }
+}
+if (sessionStorage.getItem('rental_pw_ok') === '1') {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('pwScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = '';
+  });
+}
 
 // ============================================================
 // STATE
@@ -628,9 +752,25 @@ function renderMgmtMain(c) {
           <div class="pt-row"><span class="pt-l">所在地</span><span class="pt-v">${c.addr||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">築年月</span><span class="pt-v">${c.built||'—'}${c.built?` <span style="color:var(--text3);font-size:12px">（${calcBuildAge(c.built)||''}）</span>`:''}</span></div>
           <div class="pt-row"><span class="pt-l">構造</span><span class="pt-v">${c.structure||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">屋根材</span><span class="pt-v">${c.roof||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">階数</span><span class="pt-v">${c.floors||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">総戸数</span><span class="pt-v">${c.total_rooms||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">駐車場</span><span class="pt-v">${c.parking||'—'}</span></div>
+          <div class="pt-row hl"><span class="pt-l">地番</span><span class="pt-v">${c.land_chiban||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">地目</span><span class="pt-v">${c.land_chimoku||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">地積</span><span class="pt-v">${c.land_area?c.land_area+'㎡（'+(c.land_area/3.30579).toFixed(2)+'坪）':'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">用途地域</span><span class="pt-v">${c.zone||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">建ぺい率/容積率</span><span class="pt-v">${c.kenpeir||'—'} / ${c.yosekir||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">都市計画区域</span><span class="pt-v">${c.toshi_kuiki||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">その他制限</span><span class="pt-v">${c.restrict||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">上水道</span><span class="pt-v">${c.inf_water||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">下水道</span><span class="pt-v">${c.inf_sewer||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">ガス</span><span class="pt-v">${c.inf_gas||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">電気</span><span class="pt-v">${c.inf_elec||'—'}</span></div>
+          <div class="pt-row hl"><span class="pt-l">登記所有者</span><span class="pt-v">${c.reg_owner||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">登記簿上の住所</span><span class="pt-v" style="font-size:12px">${c.reg_owner_addr||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">現住所（住民票）</span><span class="pt-v" style="font-size:12px">${c.owner_current_addr||'—'}</span></div>
+          <div class="pt-row"><span class="pt-l">抵当権等</span><span class="pt-v">${c.reg_mortgage||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">管理会社</span><span class="pt-v">${c.mgmt_co||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">管理委託費</span><span class="pt-v">${c.mgmt_fee||'—'}</span></div>
           <div class="pt-row"><span class="pt-l">担当者</span><span class="pt-v">${c.owner||'—'}</span></div>
@@ -751,8 +891,8 @@ function openAddModal() {
   else openAddBrk();
 }
 
-const BLD_FIELDS = ['name','addr','owner','built','floors','parking','mgmt_co','mgmt_fee','memo'];
-const BLD_SEL    = ['type','structure'];
+const BLD_FIELDS = ['name','addr','owner','built','floors','parking','mgmt_co','mgmt_fee','memo','land_chiban','land_area','land_share','zone','kenpeir','yosekir','restrict','reg_owner','reg_mortgage','reg_owner_addr','owner_current_addr'];
+const BLD_SEL    = ['type','structure','roof','land_chimoku','toshi_kuiki','inf_water','inf_sewer','inf_gas','inf_elec'];
 
 function openAddBld() {
   document.getElementById('bldModalTitle').textContent = '建物を登録';
@@ -772,7 +912,8 @@ function openEditBld() {
   document.getElementById('bld_total_rooms').value = c.total_rooms||'';
   document.getElementById('bld_type').value      = c.type||'マンション';
   document.getElementById('bld_structure').value = c.structure||'';
-  setTimeout(updateBldAge, 50);
+  ['roof','land_chimoku','toshi_kuiki','inf_water','inf_sewer','inf_gas','inf_elec'].forEach(f=>{const el=document.getElementById('bld_'+f);if(el)el.value=c[f]||'';});
+  setTimeout(()=>{ updateBldAge(); updateLandTsubo(); }, 50);
   document.getElementById('bldModal').style.display='flex';
 }
 function saveBld() {
@@ -783,6 +924,7 @@ function saveBld() {
   const data = { name, type:document.getElementById('bld_type').value, structure:document.getElementById('bld_structure').value };
   BLD_FIELDS.filter(f=>f!=='name').forEach(f=>{const el=document.getElementById('bld_'+f);if(el)data[f]=el.value.trim();});
   data.total_rooms = document.getElementById('bld_total_rooms').value;
+  ['roof','land_chimoku','toshi_kuiki','inf_water','inf_sewer','inf_gas','inf_elec'].forEach(f=>{const el=document.getElementById('bld_'+f);if(el)data[f]=el.value;});
   if (isEdit) { Object.assign(c, data); }
   else { const nc={id:uid(),...data,rooms:[],logs:[],notes:'',createdAt:today()}; mgmtProps.unshift(nc); curId=nc.id; }
   save(); closeModal('bldModal'); renderSidebar(); renderMain();
@@ -930,6 +1072,11 @@ document.addEventListener('keydown', e=>{
 
 
 // ── 築年数計算 ──
+function updateLandTsubo() {
+  const val = document.getElementById('bld_land_area')?.value||'';
+  const el  = document.getElementById('bld_land_tsubo');
+  if (el) el.textContent = calcBuildAge ? (parseFloat(val)>0?(parseFloat(val)/3.30579).toFixed(2):'—') : '—';
+}
 function updateBldAge() {
   const val = document.getElementById("bld_built")?.value||"";
   const el = document.getElementById("bld_age_disp");
