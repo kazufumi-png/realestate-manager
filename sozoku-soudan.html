@@ -129,7 +129,20 @@
 }
 </script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<script>
+(function(){
+  var PASSWORD = "197712103";
+  var KEY = "daiichi_sozoku_auth";
+  if(sessionStorage.getItem(KEY) !== "ok"){
+    var input = prompt("パスワードを入力してください");
+    if(input !== PASSWORD){
+      document.documentElement.innerHTML = "<body style='margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#1a1a18;color:#f7f4ef;'><div style='text-align:center'><div style='font-size:48px;margin-bottom:16px;'>🔒</div><div style='font-size:18px;'>アクセスが拒否されました</div></div></body>";
+      return;
+    }
+    sessionStorage.setItem(KEY, "ok");
+  }
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500;700&family=Noto+Sans+JP:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
 <style>
   :root {
